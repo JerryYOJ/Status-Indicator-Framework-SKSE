@@ -1,557 +1,289 @@
 # Configuration Guide
 
-SIF uses JSON rule files to define which icons appear on matching references. Place your config files in:
+SIF loads rule files from:
 
-```
-SKSE/Plugins/SIF/*.json
-```
-
-and your swf files in:
-```
-Interface/
+```text
+Data/SKSE/Plugins/SIF/*.json
 ```
 
-All `.json` files in this folder are loaded automatically on game startup. You can split rules across multiple files for organization.
+SWF files are resolved relative to:
+
+```text
+Data/Interface/
+```
+
+Each rule file contains a `rules` array. Every rule has:
+
+- `icon`: what to draw
+- `match`: conditions evaluated against `RE::TESObjectREFR*`
+
+SIF also reads a separate global settings file from:
+
+```text
+Data/SKSE/Plugins/SIF.json
+```
 
 ## Quick Start
 
 ```json
 {
-  "$schema": "https://raw.githubusercontent.com/JerryYOJ/Dynamic-Inventory-Icon-Injector-SKSE/refs/heads/master/schema.json",
+  "$schema": "./schema.json",
   "rules": [
     {
       "icon": {
-        "source": "CustomFolderNameOptional/myIcons.swf",
-        "label": "QuestItemIcon"
+        "source": "SIF/status.swf",
+        "label": "EssentialIcon"
       },
       "match": {
-        "isQuestItem": true
+        "isEssential": true
       }
     }
   ]
 }
 ```
 
-This shows the `QuestItemIcon` export from `SIF/myIcons.swf` on matching references.
+## Icon
 
----
-
-## Rule Structure
-
-Each rule has two parts:
-
-| Key | Description |
-|---|---|
-| `icon` | Which icon to display |
-| `match` | Conditions the item must satisfy (AND logic) |
-
-### Icon
-
-| Field | Required | Description |
-|---|---|---|
-| `source` | ✅ | SWF file path relative to `Interface/` |
-| `label` | ✅ | Export name inside the SWF |
-| `renderDistance` | ❌ | Maximum world distance at which the icon is rendered |
-| `fadeDistance` | ❌ | World distance at which the icon begins fading out |
-
-| `maxInstances` | 鉂?| Maximum number of simultaneous instances of this icon attached to the HUD, capped at `48` and defaulting to `5` |
-
-### Match
-
-All conditions within a single rule use **AND** logic — every condition must pass for the icon to show. Multiple rules can match the same item; all matching icons are displayed.
-
----
-
-## Match Fields
-
-### Common (All Items)
-
-| Field | Type | Example | Description |
+| Field | Required | Default | Description |
 |---|---|---|---|
-| `formType` | string | `"Weapon"` | Item category |
-| `formId` | string / array | `"Skyrim.esm\|0x12EB7"` | Specific form(s) or FormList(s) |
-| `keywords` | string / array | `["VendorItemWeapon"]` | EditorID keywords (array = must have ALL) |
-| `isStolen` | bool | `true` | Owned by someone other than the player |
-| `isFavorited` | bool | `true` | Marked as favorite |
-| `isQuestItem` | bool | `true` | Part of an active quest |
-| `goldValue` | number / range | `{"min": 100}` | Item value in gold |
-| `weight` | number / range | `{"max": 5.0}` | Item weight |
-| `conditionPerk` | string | `"MyMod.esp\|0x800"` | Perk whose conditions are evaluated against the player |
+| `source` | yes | none | SWF path relative to `Interface/` |
+| `label` | yes | none | Export name inside the SWF |
+| `fadeMaxDistance` | no | `1800.0` | Hard distance cutoff; icons past this distance are skipped |
+| `fadeStartDistance` | no | `300.0` | Distance at which alpha begins fading |
+| `maxInstances` | no | `5` | Per-label on-screen instance limit for this rule, clamped to `1..48` |
 
-**Supported `formType` values:**
-`Ammo`, `Armor`, `Book`, `Ingredient`, `Key`, `MiscItem`, `Potion`, `Scroll`, `SoulGem`, `Weapon`
+Notes:
 
-### Numbers and Ranges
+- `fadeStartDistance` and `fadeMaxDistance` are used by the runtime alpha fade.
+- `maxInstances` also affects pool attachment. `ConfigManager::GetLoadedIcons()` uses the maximum `maxInstances` seen for each label across all rules.
+- The current pool implementation is keyed by `label` only. Do not reuse the same `label` across different `source` SWFs.
 
-Numeric fields accept an exact value or a range object:
+## Match
 
-```json
-"goldValue": 100
-"goldValue": { "min": 50, "max": 200 }
-"goldValue": { "min": 100 }
-"goldValue": { "max": 500 }
-```
+All top-level fields in `match` are AND-combined.
 
-### FormID Format
+- If `match` is empty, the rule currently matches everything.
+- Field names are case-insensitive in the built-in parser.
+- `not` and `anyOf` are supported.
+- Keys inside `match` that start with `$` are ignored by the parser.
 
-FormIDs use the format `"PluginName|0xRawID"`:
+### Reference Conditions
 
-```json
-"formId": "Skyrim.esm|0x12EB7"
-"formId": ["Skyrim.esm|0x12EB7", "Dragonborn.esm|0x01CDB9"]
-```
-
-The plugin name is resolved at runtime via the load order.
-
-**FormList support:** If a FormID resolves to a `BGSListForm`, all forms inside it are expanded recursively. This lets you reference a FormList and match any item contained within it.
-
-### Condition Perk
-
-Evaluates a perk's conditions against the player at runtime. Create a perk in xEdit/CK with your desired conditions, then reference it:
-
-```json
-"conditionPerk": "MyMod.esp|0x800"
-```
-
-The perk's `perkConditions` are evaluated with the player as both subject and target. Useful for checking game state (global values, quest stages, actor values, etc.) that can't be expressed through other match fields.
-
----
-
-### Weapon Fields
-
-| Field | Type | Example |
-|---|---|---|
-| `weaponType` | string | `"OneHandSword"` |
-| `baseDamage` | number / range | `{"min": 10}` |
-| `speed` | number / range | `0.75` |
-| `reach` | number / range | `{"min": 1.0}` |
-| `stagger` | number / range | `0.5` |
-| `critDamage` | number / range | `{"min": 5}` |
-
-**Weapon types:**
-`HandToHandMelee`, `OneHandSword`, `OneHandDagger`, `OneHandAxe`, `OneHandMace`, `TwoHandSword`, `TwoHandAxe`, `Bow`, `Staff`, `Crossbow`
-
-### Armor Fields
-
-| Field | Type | Example |
-|---|---|---|
-| `weightClass` | string | `"Heavy"` |
-| `armorRating` | number / range | `{"min": 20}` |
-| `mainPart` | integer (30–61) | `32` |
-
-**Weight classes:** `Light`, `Heavy`, `Clothing`
-
-**All slot numbers:**
-* 32 - Body
-* 31 - Hair
-* 33 - Hands
-* 34 - Forearms
-* 37 - Feet
-* 38 - Calves
-* 39 - Shield
-* 35 - Amulet
-* 36 - Ring
-* 41 - Long Hair
-* 43 - Ears
-* 30 - Head
-* 42 - Circlet
-* 40 - Tail
-* 44 - Unnamed
-* 45 - Unnamed
-* 46 - Unnamed
-* 47 - Unnamed
-* 48 - Unnamed
-* 49 - Unnamed
-* 50 - Decapitate Head
-* 51 - Decapitate
-* 52 - Unnamed
-* 53 - Unnamed
-* 54 - Unnamed
-* 55 - Unnamed
-* 56 - Unnamed
-* 57 - Unnamed
-* 58 - Unnamed
-* 59 - Unnamed
-* 60 - Unnamed
-* 61 - FX01
-
-### Potion Fields
-
-| Field | Type | Example |
-|---|---|---|
-| `potionType` | string | `"Poison"` |
-
-**Potion types:** `Food`, `Poison`, `Medicine`
-
-### Soul Gem Fields
-
-| Field | Type | Example |
-|---|---|---|
-| `gemSize` | string | `"Grand"` |
-| `soulSize` | string | `"Greater"` |
-
-`gemSize` checks the gem's maximum capacity. `soulSize` checks the currently contained soul (via ExtraSoul data).
-
-**Soul levels:** `None`, `Petty`, `Lesser`, `Common`, `Greater`, `Grand`
-
-### Book Fields
-
-| Field | Type | Example |
-|---|---|---|
-| `teachesSpell` | bool | `true` |
-| `teachesSkill` | string | `"Enchanting"` |
-| `isRead` | bool | `false` |
-
-**Skills:** `OneHanded`, `TwoHanded`, `Marksman`, `Block`, `Smithing`, `HeavyArmor`, `LightArmor`, `Pickpocket`, `Lockpicking`, `Sneak`, `Alchemy`, `Speechcraft`, `Alteration`, `Conjuration`, `Destruction`, `Illusion`, `Restoration`, `Enchanting`
-
----
-
-## Object-Field Conditions
-
-These match against extra data attached to items at runtime.
-
-### Enchantment
-
-Matches items with an enchantment. Pass `{}` to match any enchanted item, or add sub-fields to filter further:
-
-```json
-"enchantment": {}
-"enchantment": {
-  "canLearn": true,
-  "isKnown": false,
-  "magicEffect": {
-    "school": "Destruction",
-    "primaryValue": "Health"
-  }
-}
-```
-
-| Sub-field | Type | Description |
-|---|---|---|
-| `canLearn` | bool | Whether the enchantment can be learned (has a base enchantment; player-created enchantments return `false`) |
-| `isKnown` | bool | Whether the player knows this enchantment (player-created = always `true`; learnable = base is known; otherwise `false`) |
-| `magicEffect` | object | Effect matchers (see below) |
-
-Checks ExtraEnchantment first (player-applied), then falls back to the base form enchantment.
-
-### Poison
-
-Matches items with an applied poison. Use `magicEffect` to filter by effects:
-
-```json
-"poison": {}
-"poison": {
-  "magicEffect": { "school": "Restoration" }
-}
-```
-
-### Magic Effect
-
-Use for potions and scrolls where you want to match their inherent effects directly:
-
-```json
-"magicEffect": { "archetype": "ValueModifier", "primaryValue": "Health" }
-```
-
-### Tempered
-
-Matches items with tempering (ExtraHealth):
-
-```json
-"tempered": { "min": 1.5 }
-```
-
----
-
-## Effect Matchers
-
-Used inside `magicEffect` (standalone or within `enchantment`/`poison`). All matchers use **AND** logic — the condition passes if **any single effect** on the item satisfies **all** specified matchers.
+These work on any `TESObjectREFR`.
 
 | Field | Type | Description |
 |---|---|---|
-| `effectId` | FormID | Specific magic effect form |
-| `school` | string | `Alteration`, `Conjuration`, `Destruction`, `Illusion`, `Restoration` |
-| `archetype` | string | Effect archetype (see list below) |
-| `deliveryType` | string | `Self`, `Touch`, `Aimed`, `TargetActor`, `TargetLocation` |
-| `castType` | string | `ConstantEffect`, `FireAndForget`, `Concentration`, `Scroll` |
-| `primaryValue` | string | Actor value affected (e.g. `Health`, `Stamina`) |
-| `resistance` | string | Resistance type (e.g. `FireResist`, `MagicResist`) |
-| `magnitude` | number / range | Effect magnitude |
-| `duration` | number / range | Effect duration in seconds |
-| `area` | number / range | Effect area |
-| `skillLevel` | number / range | Minimum skill level |
-| `effectFlags` | string / array | Effect flags like `"Hostile"`, `"Detrimental"` |
-| `effectKeywords` | string | Keyword EditorID on the base effect |
+| `formType` | string | Base form type. Supported values: `NPC`, `Door` |
+| `formId` | string or array | Matches the reference FormID |
+| `baseFormId` | string or array | Matches the base form FormID |
+| `keywords` | string or array | Keyword FormID(s). All listed keywords must be present |
+| `isQuestAlias` | bool | True if the ref has `ExtraAliasInstanceArray` |
+| `worldspaceFormId` | string or array | Matches the parent cell worldspace FormID |
+| `locationFormId` | string or array | Matches `GetCurrentLocation()` FormID |
+| `conditionPerk` | string | Perk FormID whose conditions are evaluated with player as subject and ref as target |
 
-<details>
-<summary><b>All archetype values</b></summary>
+### Actor Conditions
 
-`ValueModifier`, `Script`, `Dispel`, `CureDisease`, `Absorb`, `DualValueModifier`, `Calm`, `Demoralize`, `Frenzy`, `Disarm`, `CommandSummoned`, `Invisibility`, `Light`, `Lock`, `Open`, `BoundWeapon`, `SummonCreature`, `DetectLife`, `Telekinesis`, `Paralysis`, `Reanimate`, `SoulTrap`, `TurnUndead`, `Guide`, `Cloak`, `SlowTime`, `Rally`, `EnhanceWeapon`, `SpawnHazard`, `Etherealize`, `Banish`, `Disguise`, `PeakValueModifier`
+These only match when the ref is an actor.
 
-</details>
+| Field | Type | Description |
+|---|---|---|
+| `raceFormId` | string or array | Matches actor race FormID |
+| `level` | object | Numeric range using `min` and/or `max` |
+| `isDead` | bool | Matches actor death state |
+| `isHostile` | bool | Matches hostility to the player |
+| `isEssential` | bool | Matches essential flag |
+| `isProtected` | bool | Matches protected flag |
+| `isPlayerTeammate` | bool | Matches follower/teammate state |
+| `isInCombat` | bool | Matches combat state |
 
-<details>
-<summary><b>All effect flag values</b></summary>
+### Logical Operators
 
-`Hostile`, `Recover`, `Detrimental`, `NoDuration`, `NoArea`, `FXPersist`, `GoryVisuals`, `HideInUI`, `Painless`, `NoHitEffect`, `NoDeathDispel`, `PowerAffectsMagnitude`, `PowerAffectsDuration`
+`not`
 
-</details>
+- Object form: AND-combines inner fields, then negates the result.
+- Array form: each object is independently negated, and all of them must pass.
 
-<details>
-<summary><b>All resistance values</b></summary>
-
-`DamageResist`, `PoisonResist`, `FireResist`, `ElectricResist`, `FrostResist`, `MagicResist`, `DiseaseResist`
-
-</details>
-
----
-
-## Negation
-
-Use `not` to invert a group of conditions. It accepts an **object** or an **array of objects**.
-
-### Object form
-
-Multiple conditions inside the object are AND-combined, then the result is negated:
+Example:
 
 ```json
 {
-  "icon": { "source": "SIF/icons.swf", "label": "UnenchantedIcon" },
   "match": {
-    "formType": "Weapon",
-    "not": {
-      "enchantment": {}
-    }
+    "formType": "NPC",
+    "not": { "isDead": true }
   }
 }
 ```
 
-This matches all weapons that are **not** enchanted.
+`anyOf`
 
-### Array form
+- Takes an array of `match` objects.
+- At least one element must match.
 
-Each array element is independently negated. All negations must pass (AND of NOTs):
+Example:
 
 ```json
 {
-  "icon": { "source": "SIF/icons.swf", "label": "PlainWeaponIcon" },
   "match": {
-    "formType": "Weapon",
-    "not": [
-      { "enchantment": {} },
-      { "poison": {} }
+    "anyOf": [
+      { "isEssential": true },
+      { "isPlayerTeammate": true }
     ]
   }
 }
 ```
 
-This matches weapons that are **not** enchanted **and** **not** poisoned. Equivalent to `NOT(enchanted) AND NOT(poisoned)`.
+## FormID Format
 
----
+SIF expects FormIDs in this format:
+
+```json
+"Skyrim.esm|0x000A2C94"
+```
+
+Arrays are also accepted:
+
+```json
+[
+  "Skyrim.esm|0x000A2C94",
+  "Dragonborn.esm|0x0001CDB9"
+]
+```
+
+Behavior:
+
+- Plugin names are resolved through `TESDataHandler`.
+- If a resolved FormID is a `BGSListForm`, the matcher checks membership with `HasForm(...)`.
+- `keywords` expects keyword FormIDs, not editor IDs.
+
+## Range Fields
+
+Current implementation only accepts object ranges for `level`:
+
+```json
+{ "min": 10, "max": 50 }
+{ "min": 20 }
+{ "max": 80 }
+```
+
+Bare numbers are not currently supported for `level`.
+
+## Global Settings
+
+Global display settings are loaded from `Data/SKSE/Plugins/SIF.json`.
+
+```json
+{
+  "actorOffsetZ": 20.0,
+  "markerOffsetZ": 20.0,
+  "iconSpacing": 30.0,
+  "scaleDepthNear": 200.0,
+  "scaleDepthFar": 1000.0,
+  "scaleMin": 35.0,
+  "scaleMax": 100.0
+}
+```
+
+| Field | Default | Description |
+|---|---|---|
+| `actorOffsetZ` | `20.0` | Extra Z offset applied to actor anchors |
+| `markerOffsetZ` | `20.0` | Extra Z offset applied to object/load-door anchors |
+| `iconSpacing` | `30.0` | Horizontal spacing between multiple icons on one target |
+| `scaleDepthNear` | `200.0` | Near depth clamp for icon scaling |
+| `scaleDepthFar` | `1000.0` | Far depth clamp for icon scaling |
+| `scaleMin` | `35.0` | Minimum icon scale percent |
+| `scaleMax` | `100.0` | Maximum icon scale percent |
 
 ## Examples
 
-### Quest item icon
-```json
-{
-  "icon": { "source": "SIF/questItemIcon.swf", "label": "QuestItemIcon" },
-  "match": { "isQuestItem": true }
-}
-```
+Essential NPCs:
 
-### Fire enchanted weapons
-```json
-{
-  "icon": { "source": "SIF/elements.swf", "label": "FireIcon" },
-  "match": {
-    "formType": "Weapon",
-    "enchantment": {
-      "magicEffect": { "resistance": "FireResist" }
-    }
-  }
-}
-```
-
-### Valuable light armor
-```json
-{
-  "icon": { "source": "SIF/quality.swf", "label": "PremiumIcon" },
-  "match": {
-    "formType": "Armor",
-    "weightClass": "Light",
-    "goldValue": { "min": 500 },
-    "armorRating": { "min": 30 }
-  }
-}
-```
-
-### Grand soul gems with grand souls
-```json
-{
-  "icon": { "source": "SIF/souls.swf", "label": "FullGrandIcon" },
-  "match": {
-    "formType": "SoulGem",
-    "gemSize": "Grand",
-    "soulSize": "Grand"
-  }
-}
-```
-
-### Poisoned favorited weapons
-```json
-{
-  "icon": { "source": "SIF/status.swf", "label": "PoisonedFavIcon" },
-  "match": {
-    "formType": "Weapon",
-    "isFavorited": true,
-    "poison": {}
-  }
-}
-```
-
-### Healing potions (specific effect)
-```json
-{
-  "icon": { "source": "SIF/potions.swf", "label": "HealingIcon" },
-  "match": {
-    "formType": "Potion",
-    "potionType": "Medicine",
-    "magicEffect": {
-      "archetype": "ValueModifier",
-      "primaryValue": "Health"
-    }
-  }
-}
-```
-
-### Replace the vanilla enchantment icon
 ```json
 {
   "icon": {
-    "source": "SIF/custom.swf",
-    "label": "CustomEnchantIcon",
+    "source": "SIF/status.swf",
+    "label": "EssentialIcon"
   },
   "match": {
-    "enchantment": {}
+    "isEssential": true
   }
 }
 ```
 
-### Unknown enchantment indicator
+Doors only:
+
 ```json
 {
-  "icon": { "source": "SIF/status.swf", "label": "UnknownEnchantIcon" },
+  "icon": {
+    "source": "SIF/doors.swf",
+    "label": "DoorIcon",
+    "fadeMaxDistance": 600.0,
+    "fadeStartDistance": 400.0,
+    "maxInstances": 3
+  },
   "match": {
-    "enchantment": { "isKnown": false }
+    "formType": "Door"
   }
 }
 ```
 
-### Items from a FormList
+Specific NPC by base form:
+
 ```json
 {
-  "icon": { "source": "SIF/custom.swf", "label": "SpecialItemIcon" },
+  "icon": {
+    "source": "SIF/special.swf",
+    "label": "LydiaIcon"
+  },
   "match": {
-    "formId": "MyMod.esp|0x800"
+    "baseFormId": "Skyrim.esm|0x000A2C94"
   }
 }
 ```
-If `0x800` is a FormList, all forms inside it are matched.
 
-### Condition perk check
+Hostile NPCs in combat:
+
 ```json
 {
-  "icon": { "source": "SIF/custom.swf", "label": "ConditionalIcon" },
+  "icon": {
+    "source": "SIF/combat.swf",
+    "label": "CombatIcon"
+  },
   "match": {
-    "conditionPerk": "MyMod.esp|0x900"
+    "formType": "NPC",
+    "isHostile": true,
+    "isInCombat": true
   }
 }
 ```
-
----
 
 ## Developer API
 
-Other SKSE plugins can register custom match fields by listening for SIF's registration event. Include `SIF_API.h` from the `api/` folder in your project.
-
-### Setup
-
-In your plugin's `SKSEPluginLoad`, register a listener:
+Other plugins can register custom match fields through `api/SIF_API.h`.
 
 ```cpp
 #include "SIF_API.h"
 
-SKSEPluginLoad(const SKSE::LoadInterface* skse) {
-    SKSE::Init(skse);
-
-    SIF::ListenForRegistration([](SKSE::MessagingInterface::Message* msg) {
-        if (msg->type == SIF::kMessage_GetAPI) {
-            auto* api = static_cast<SIF::IAPI*>(msg->data);
-            api->RegisterCondition("myCustomField",
-                [](const Json::Value& val, RE::FormType type)
-                    -> std::unique_ptr<SIF::ICondition> {
-                    // Parse val and return your condition, or nullptr
-                    return std::make_unique<MyCondition>(val);
-                });
-        }
-    });
-
-    return true;
-}
-```
-
-### ICondition
-
-Your condition must inherit from `SIF::ICondition`:
-
-```cpp
-class MyCondition : public SIF::ICondition {
-public:
-    bool Match(RE::InventoryEntryData* entry) const override {
-        // Return true if the item should get the icon
+SIF::ListenForRegistration([](SKSE::MessagingInterface::Message* msg) {
+    if (msg->type == SIF::kMessage_GetAPI) {
+        auto* api = static_cast<SIF::IAPI*>(msg->data);
+        api->RegisterCondition(
+            "myCustomField",
+            [](const Json::Value& val, RE::FormType formType) -> std::unique_ptr<SIF::ICondition> {
+                return std::make_unique<MyCondition>(val);
+            });
     }
-};
+});
 ```
 
-### ConditionBuilder
+Notes:
 
-```cpp
-using ConditionBuilder = std::function<
-    std::unique_ptr<ICondition>(const Json::Value& value, RE::FormType type)
->;
-```
+- `ConditionBuilder` receives `(const Json::Value&, RE::FormType)`.
+- Custom field names are matched case-insensitively.
+- The current `SIF::ListenForRegistration` implementation registers against the listener name `"StatusIndicatorFramework"`.
 
-The builder receives the JSON value for your custom field and the `formType` from the rule's `match` block (or `None` if not specified). Return `nullptr` if the value is invalid.
+## Schema
 
-### Using Custom Conditions in JSON
+Use `schema.json` for rule files under `Data/SKSE/Plugins/SIF/`.
 
-Once registered, your custom field works like any built-in match field:
-
-```json
-{
-  "icon": { "source": "SIF/icons.swf", "label": "MyIcon" },
-  "match": {
-    "formType": "Weapon",
-    "myCustomField": { "someParam": 42 }
-  }
-}
-```
-
-### Notes
-
-- Registration happens during the `kDataLoaded` phase, before JSON configs are parsed. Your custom conditions are available for all config files.
-- Field names are case-insensitive and must not conflict with built-in field names.
-- `SIF::ListenForRegistration` registers a listener for the plugin named `"DynamicInventoryIconInjector"`.
-
----
-
-## Schema Validation
-
-Point your editor to the included schema for autocompletion and validation:
-
-```json
-{
-  "$schema": "./schema.json",
-  "rules": [ ... ]
-}
-```
+It does not validate the separate global settings file `Data/SKSE/Plugins/SIF.json`.

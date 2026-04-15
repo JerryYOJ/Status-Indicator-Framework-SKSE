@@ -134,6 +134,43 @@ namespace Config
 		Func _fn;
 	};
 
+	class FormIDCondition final : public Condition
+	{
+	public:
+		FormIDCondition(std::vector<RE::FormID> ids, bool useBase)
+			: _ids(std::move(ids)), _useBase(useBase) {}
+
+		bool Match(RE::TESObjectREFR* ref) const override;
+
+	private:
+		std::vector<RE::FormID> _ids;
+		bool                    _useBase;
+	};
+
+	class KeywordsCondition final : public Condition
+	{
+	public:
+		explicit KeywordsCondition(std::vector<RE::BGSKeyword*> keywords)
+			: _keywords(std::move(keywords)) {}
+
+		bool Match(RE::TESObjectREFR* ref) const override;
+
+	private:
+		std::vector<RE::BGSKeyword*> _keywords;
+	};
+
+	// Runs the perk's built-in conditions with player as subject and ref as target
+	class PerkCondition final : public Condition
+	{
+	public:
+		explicit PerkCondition(RE::BGSPerk* perk) : _perk(perk) {}
+
+		bool Match(RE::TESObjectREFR* ref) const override;
+
+	private:
+		RE::BGSPerk* _perk;
+	};
+
 	class NotCondition final : public Condition
 	{
 	public:

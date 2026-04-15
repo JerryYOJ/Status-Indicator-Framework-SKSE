@@ -10,21 +10,31 @@ namespace Config
 	{
 		// ── ref conditions ────────────────────────────────────────────────────
 
+		{ "formType", [](const Json::Value& val, RE::FormType) -> std::unique_ptr<Condition> {
+			if (!val.isString()) return nullptr;
+			static const std::unordered_map<std::string, RE::FormType> kMap{
+				{ "NPC",  RE::FormType::NPC },
+				{ "Door", RE::FormType::Door },
+			};
+			const auto it = kMap.find(val.asString());
+			if (it == kMap.end()) return nullptr;
+			return std::make_unique<ExactMatch<RE::FormType>>(it->second,
+				[](RE::TESObjectREFR* ref) -> RE::FormType {
+					auto* base = ref->GetBaseObject();
+					return base ? base->GetFormType() : RE::FormType::None;
+				});
+		}},
+
 		{ "formId", [](const Json::Value& val, RE::FormType) -> std::unique_ptr<Condition> {
 			auto ids = ParseUtil::ParseFormIDArray(val);
 			if (ids.empty()) return nullptr;
-			return std::make_unique<SetCondition<RE::FormID>>(std::move(ids),
-				[](RE::TESObjectREFR* ref) -> RE::FormID { return ref->GetFormID(); });
+			return std::make_unique<FormIDCondition>(std::move(ids), false);
 		}},
 
 		{ "baseFormId", [](const Json::Value& val, RE::FormType) -> std::unique_ptr<Condition> {
 			auto ids = ParseUtil::ParseFormIDArray(val);
 			if (ids.empty()) return nullptr;
-			return std::make_unique<SetCondition<RE::FormID>>(std::move(ids),
-				[](RE::TESObjectREFR* ref) -> RE::FormID {
-					auto* base = ref->GetBaseObject();
-					return base ? base->GetFormID() : 0;
-				});
+			return std::make_unique<FormIDCondition>(std::move(ids), true);
 		}},
 
 		{ "keywords", [](const Json::Value& val, RE::FormType) -> std::unique_ptr<Condition> {
@@ -35,11 +45,7 @@ namespace Config
 				if (auto* kw = RE::TESForm::LookupByID<RE::BGSKeyword>(id))
 					kws.push_back(kw);
 			if (kws.empty()) return nullptr;
-			return std::make_unique<FuncCondition>([kws = std::move(kws)](RE::TESObjectREFR* ref) {
-				for (auto* kw : kws)
-					if (ref->HasKeyword(kw)) return true;
-				return false;
-			});
+			return std::make_unique<KeywordsCondition>(std::move(kws));
 		}},
 
 		{ "isQuestAlias", [](const Json::Value& val, RE::FormType) -> std::unique_ptr<Condition> {
@@ -73,20 +79,11 @@ namespace Config
 		}},
 
 		{ "conditionPerk", [](const Json::Value& val, RE::FormType) -> std::unique_ptr<Condition> {
-			auto ids = ParseUtil::ParseFormIDArray(val);
+			const auto ids = ParseUtil::ParseFormIDArray(val);
 			if (ids.empty()) return nullptr;
-			std::vector<RE::BGSPerk*> perks;
-			for (auto id : ids)
-				if (auto* perk = RE::TESForm::LookupByID<RE::BGSPerk>(id))
-					perks.push_back(perk);
-			if (perks.empty()) return nullptr;
-			return std::make_unique<FuncCondition>([perks = std::move(perks)](RE::TESObjectREFR* ref) {
-				auto* actor = ref->As<RE::Actor>();
-				if (!actor) return false;
-				for (auto* perk : perks)
-					if (actor->HasPerk(perk)) return true;
-				return false;
-			});
+			auto* perk = RE::TESForm::LookupByID<RE::BGSPerk>(ids[0]);
+			if (!perk) return nullptr;
+			return std::make_unique<PerkCondition>(perk);
 		}},
 
 		// ── actor conditions ──────────────────────────────────────────────────
@@ -174,16 +171,30 @@ namespace Config
 		// ── logical operators ─────────────────────────────────────────────────
 
 		{ "not", [](const Json::Value& val, RE::FormType formType) -> std::unique_ptr<Condition> {
-			if (!val.isObject()) return nullptr;
-			auto inner = std::make_unique<AllOfCondition>();
-			for (const auto& name : val.getMemberNames()) {
-				if (name.empty() || name[0] == '$' || name == "formType") continue;
-				if (auto it = ConditionParser::BuilderMap.find(name); it != ConditionParser::BuilderMap.end())
-					if (auto cond = it->second(val[name], formType))
-						inner->Add(std::move(cond));
+			auto buildNot = [&](const Json::Value& obj) -> std::unique_ptr<Condition> {
+				if (!obj.isObject()) return nullptr;
+				auto inner = std::make_unique<AllOfCondition>();
+				for (const auto& name : obj.getMemberNames()) {
+					if (name.empty() || name[0] == '$') continue;
+					if (auto it = ConditionParser::BuilderMap.find(name); it != ConditionParser::BuilderMap.end())
+						if (auto cond = it->second(obj[name], formType))
+							inner->Add(std::move(cond));
+				}
+				if (!inner->HasConditions()) return nullptr;
+				return std::make_unique<NotCondition>(std::move(inner));
+			};
+
+			if (val.isObject()) {
+				return buildNot(val);
+			} else if (val.isArray()) {
+				auto all = std::make_unique<AllOfCondition>();
+				for (const auto& elem : val)
+					if (auto cond = buildNot(elem))
+						all->Add(std::move(cond));
+				if (!all->HasConditions()) return nullptr;
+				return all;
 			}
-			if (!inner->HasConditions()) return nullptr;
-			return std::make_unique<NotCondition>(std::move(inner));
+			return nullptr;
 		}},
 
 		{ "anyOf", [](const Json::Value& val, RE::FormType formType) -> std::unique_ptr<Condition> {
@@ -193,7 +204,7 @@ namespace Config
 				if (!matchObj.isObject()) continue;
 				auto all = std::make_unique<AllOfCondition>();
 				for (const auto& name : matchObj.getMemberNames()) {
-					if (name.empty() || name[0] == '$' || name == "formType") continue;
+					if (name.empty() || name[0] == '$') continue;
 					if (auto it = ConditionParser::BuilderMap.find(name); it != ConditionParser::BuilderMap.end())
 						if (auto cond = it->second(matchObj[name], formType))
 							all->Add(std::move(cond));
@@ -218,14 +229,14 @@ namespace Config
 		IconData iconData;
 		iconData.source = icon.get("source", "").asString();
 		iconData.label = icon.get("label", "").asString();
-		iconData.renderDistance = icon.get("renderDistance", iconData.renderDistance).asFloat();
-		iconData.fadeDistance = icon.get("fadeDistance", iconData.fadeDistance).asFloat();
+		iconData.fadeMaxDistance = icon.get("fadeMaxDistance", iconData.fadeMaxDistance).asFloat();
+		iconData.fadeStartDistance = icon.get("fadeStartDistance", iconData.fadeStartDistance).asFloat();
 		iconData.maxInstances = std::clamp(icon.get("maxInstances", iconData.maxInstances).asUInt(), 1u, 48u);
 		parsed.SetIcon(std::move(iconData));
 
 		static const std::unordered_map<std::string, RE::FormType> kFormTypeMap{
-			{ "Actor", RE::FormType::ActorCharacter },
-			{ "Door",  RE::FormType::Door },
+			{ "NPC",  RE::FormType::NPC },
+			{ "Door", RE::FormType::Door },
 		};
 
 		RE::FormType formType = RE::FormType::None;
@@ -238,7 +249,7 @@ namespace Config
 		}
 
 		for (const auto& name : match.getMemberNames()) {
-			if (name.empty() || name[0] == '$' || name == "formType") {
+			if (name.empty() || name[0] == '$') {
 				continue;
 			}
 

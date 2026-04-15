@@ -54,6 +54,6 @@ namespace SIF {
     //     return true;
     // }
     inline void ListenForRegistration(SKSE::MessagingInterface::EventCallback* cb) {
-		SKSE::GetMessagingInterface()->RegisterListener("DynamicInventoryIconInjector", cb);
+		SKSE::GetMessagingInterface()->RegisterListener("StatusIndicatorFramework", cb);
     }
 }

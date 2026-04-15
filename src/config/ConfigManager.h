@@ -3,6 +3,16 @@
 #include "Rule.h"
 
 namespace Config {
+    struct Settings {
+        float actorOffsetZ{ 20.0f };
+        float markerOffsetZ{ 20.0f };
+        float iconSpacing{ 30.0f };
+        float scaleDepthNear{ 200.0f };
+        float scaleDepthFar{ 1000.0f };
+        float scaleMin{ 35.0f };
+        float scaleMax{ 100.0f };
+    };
+
     class ConfigManager : public SINGLETON<ConfigManager>, public SIF::IAPI {
         friend SINGLETON;
 
@@ -17,6 +27,9 @@ namespace Config {
         }
 
         void LoadConfigs();
+        void LoadSettings();
+
+        const Settings& GetSettings() const { return _settings; }
 
         // Returns all matching icons for a reference
         std::vector<const IconData *> GetIcons(RE::TESObjectREFR* ref) const;
@@ -39,5 +52,6 @@ namespace Config {
         void LoadExternalConditions();
 
         std::vector<Rule> _rules;
+        Settings _settings;
     };
 }

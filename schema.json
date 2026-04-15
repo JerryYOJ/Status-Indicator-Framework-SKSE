@@ -1,502 +1,182 @@
 {
-	"$schema": "http://json-schema.org/draft-07/schema#",
-	"title": "SIF Config",
-	"description": "Status Indicator Framework rule configuration",
-	"type": "object",
-	"required": [
-		"rules"
-	],
-	"properties": {
-		"rules": {
-			"type": "array",
-			"items": {
-				"$ref": "#/$defs/rule"
-			}
-		}
-	},
-	"$defs": {
-		"rule": {
-			"type": "object",
-			"required": [
-				"icon",
-				"match"
-			],
-			"properties": {
-				"icon": {
-					"$ref": "#/$defs/icon"
-				},
-				"match": {
-					"$ref": "#/$defs/match"
-				}
-			}
-		},
-		"icon": {
-			"type": "object",
-			"required": [
-				"source",
-				"label"
-			],
-			"properties": {
-				"source": {
-					"type": "string",
-					"description": "SWF path relative to Interface/ (e.g. SIF/myIcons.swf)"
-				},
-				"label": {
-					"type": "string",
-					"description": "Export name inside the SWF"
-				},
-				"renderDistance": {
-					"type": "number",
-					"description": "Maximum world distance at which this icon should render."
-				},
-				"fadeDistance": {
-					"type": "number",
-					"description": "World distance at which this icon should begin fading out."
-				},
-				"maxInstances": {
-					"type": "integer",
-					"minimum": 1,
-					"maximum": 48,
-					"description": "Maximum number of simultaneous instances of this icon attached to the HUD."
-				}
-			}
-		},
-		"numberOrRange": {
-			"oneOf": [
-				{
-					"type": "number"
-				},
-				{
-					"type": "object",
-					"properties": {
-						"min": {
-							"type": "number"
-						},
-						"max": {
-							"type": "number"
-						}
-					},
-					"minProperties": 1
-				}
-			]
-		},
-		"formIdValue": {
-			"description": "FormID as \"PluginName|0xRawID\", or array of them. If a FormID resolves to a FormList, its contents are expanded recursively.",
-			"oneOf": [
-				{
-					"type": "string",
-					"pattern": "^.+\\|0x[0-9A-Fa-f]+$"
-				},
-				{
-					"type": "array",
-					"items": {
-						"type": "string",
-						"pattern": "^.+\\|0x[0-9A-Fa-f]+$"
-					}
-				},
-				{
-					"type": "object",
-					"properties": {
-						"anyOf": {
-							"type": "array",
-							"items": {
-								"type": "string",
-								"pattern": "^.+\\|0x[0-9A-Fa-f]+$"
-							}
-						}
-					}
-				}
-			]
-		},
-		"keywordsValue": {
-			"description": "Editor ID string or array of editor IDs (array = AND)",
-			"oneOf": [
-				{
-					"type": "string"
-				},
-				{
-					"type": "array",
-					"items": {
-						"type": "string"
-					}
-				}
-			]
-		},
-		"effectMatchers": {
-			"type": "object",
-			"description": "All matchers use AND logic. Matches if ANY single effect satisfies all matchers.",
-			"properties": {
-				"effectId": {
-					"$ref": "#/$defs/formIdValue"
-				},
-				"school": {
-					"type": "string",
-					"enum": [
-						"Alteration",
-						"Conjuration",
-						"Destruction",
-						"Illusion",
-						"Restoration"
-					]
-				},
-				"magnitude": {
-					"$ref": "#/$defs/numberOrRange"
-				},
-				"duration": {
-					"$ref": "#/$defs/numberOrRange"
-				},
-				"area": {
-					"$ref": "#/$defs/numberOrRange"
-				},
-				"archetype": {
-					"type": "string",
-					"enum": [
-						"ValueModifier",
-						"Script",
-						"Dispel",
-						"CureDisease",
-						"Absorb",
-						"DualValueModifier",
-						"Calm",
-						"Demoralize",
-						"Frenzy",
-						"Disarm",
-						"CommandSummoned",
-						"Invisibility",
-						"Light",
-						"Lock",
-						"Open",
-						"BoundWeapon",
-						"SummonCreature",
-						"DetectLife",
-						"Telekinesis",
-						"Paralysis",
-						"Reanimate",
-						"SoulTrap",
-						"TurnUndead",
-						"Guide",
-						"Cloak",
-						"SlowTime",
-						"Rally",
-						"EnhanceWeapon",
-						"SpawnHazard",
-						"Etherealize",
-						"Banish",
-						"Disguise",
-						"PeakValueModifier"
-					]
-				},
-				"deliveryType": {
-					"type": "string",
-					"enum": [
-						"Self",
-						"Touch",
-						"Aimed",
-						"TargetActor",
-						"TargetLocation"
-					]
-				},
-				"castType": {
-					"type": "string",
-					"enum": [
-						"ConstantEffect",
-						"FireAndForget",
-						"Concentration",
-						"Scroll"
-					]
-				},
-				"primaryValue": {
-					"type": "string",
-					"enum": [
-						"Health",
-						"Magicka",
-						"Stamina",
-						"HealRate",
-						"MagickaRate",
-						"StaminaRate",
-						"SpeedMult",
-						"CarryWeight",
-						"OneHanded",
-						"TwoHanded",
-						"Marksman",
-						"Block",
-						"Smithing",
-						"HeavyArmor",
-						"LightArmor",
-						"Pickpocket",
-						"Lockpicking",
-						"Sneak",
-						"Alchemy",
-						"Speechcraft",
-						"Alteration",
-						"Conjuration",
-						"Destruction",
-						"Illusion",
-						"Restoration",
-						"Enchanting"
-					]
-				},
-				"resistance": {
-					"type": "string",
-					"enum": [
-						"DamageResist",
-						"PoisonResist",
-						"FireResist",
-						"ElectricResist",
-						"FrostResist",
-						"MagicResist",
-						"DiseaseResist"
-					]
-				},
-				"effectFlags": {
-					"description": "Single flag string or array of flags (combined with OR)",
-					"oneOf": [
-						{
-							"type": "string",
-							"enum": [
-								"Hostile",
-								"Recover",
-								"Detrimental",
-								"NoDuration",
-								"NoArea",
-								"FXPersist",
-								"GoryVisuals",
-								"HideInUI",
-								"Painless",
-								"NoHitEffect",
-								"NoDeathDispel",
-								"PowerAffectsMagnitude",
-								"PowerAffectsDuration"
-							]
-						},
-						{
-							"type": "array",
-							"items": {
-								"type": "string"
-							}
-						}
-					]
-				},
-				"effectKeywords": {
-					"type": "string",
-					"description": "Editor ID of a keyword on the base effect"
-				},
-				"skillLevel": {
-					"$ref": "#/$defs/numberOrRange"
-				}
-			},
-			"additionalProperties": false
-		},
-		"match": {
-			"type": "object",
-			"description": "All fields use AND logic. Fields starting with $ are ignored.",
-			"properties": {
-				"formType": {
-					"type": "string",
-					"enum": [
-						"Ammo",
-						"Armor",
-						"Book",
-						"Ingredient",
-						"Key",
-						"MiscItem",
-						"Potion",
-						"Scroll",
-						"SoulGem",
-						"Weapon"
-					]
-				},
-				"formId": {
-					"$ref": "#/$defs/formIdValue"
-				},
-				"keywords": {
-					"$ref": "#/$defs/keywordsValue"
-				},
-				"isStolen": {
-					"type": "boolean"
-				},
-				"isFavorited": {
-					"type": "boolean"
-				},
-				"isQuestItem": {
-					"type": "boolean"
-				},
-				"goldValue": {
-					"$ref": "#/$defs/numberOrRange"
-				},
-				"weight": {
-					"$ref": "#/$defs/numberOrRange"
-				},
-				"conditionPerk": {
-					"description": "Perk FormID whose conditions are evaluated against the player at runtime",
-					"type": "string",
-					"pattern": "^.+\\|0x[0-9A-Fa-f]+$"
-				},
-				"weaponType": {
-					"type": "string",
-					"enum": [
-						"HandToHandMelee",
-						"OneHandSword",
-						"OneHandDagger",
-						"OneHandAxe",
-						"OneHandMace",
-						"TwoHandSword",
-						"TwoHandAxe",
-						"Bow",
-						"Staff",
-						"Crossbow"
-					]
-				},
-				"baseDamage": {
-					"$ref": "#/$defs/numberOrRange"
-				},
-				"speed": {
-					"$ref": "#/$defs/numberOrRange"
-				},
-				"reach": {
-					"$ref": "#/$defs/numberOrRange"
-				},
-				"stagger": {
-					"$ref": "#/$defs/numberOrRange"
-				},
-				"critDamage": {
-					"$ref": "#/$defs/numberOrRange"
-				},
-				"weightClass": {
-					"type": "string",
-					"enum": [
-						"Light",
-						"Heavy",
-						"Clothing"
-					]
-				},
-				"armorRating": {
-					"$ref": "#/$defs/numberOrRange"
-				},
-				"mainPart": {
-					"type": "integer",
-					"minimum": 30,
-					"maximum": 61,
-					"description": "Biped slot number (30=Head, 32=Body, 33=Hands, etc.)"
-				},
-				"potionType": {
-					"type": "string",
-					"enum": [
-						"Food",
-						"Poison",
-						"Medicine"
-					]
-				},
-				"gemSize": {
-					"type": "string",
-					"enum": [
-						"None",
-						"Petty",
-						"Lesser",
-						"Common",
-						"Greater",
-						"Grand"
-					]
-				},
-				"soulSize": {
-					"type": "string",
-					"enum": [
-						"None",
-						"Petty",
-						"Lesser",
-						"Common",
-						"Greater",
-						"Grand"
-					]
-				},
-				"teachesSpell": {
-					"type": "boolean"
-				},
-				"teachesSkill": {
-					"type": "string",
-					"enum": [
-						"OneHanded",
-						"TwoHanded",
-						"Marksman",
-						"Block",
-						"Smithing",
-						"HeavyArmor",
-						"LightArmor",
-						"Pickpocket",
-						"Lockpicking",
-						"Sneak",
-						"Alchemy",
-						"Speechcraft",
-						"Alteration",
-						"Conjuration",
-						"Destruction",
-						"Illusion",
-						"Restoration",
-						"Enchanting"
-					]
-				},
-				"isRead": {
-					"type": "boolean"
-				},
-				"enchantment": {
-					"type": "object",
-					"description": "Match enchanted items. Pass {} to match any enchanted item.",
-					"properties": {
-						"canLearn": {
-							"type": "boolean",
-							"description": "Whether the enchantment can be learned (has a base enchantment; player-created enchantments return false)"
-						},
-						"isKnown": {
-							"type": "boolean",
-							"description": "Whether the player knows this enchantment (player-created = always true; learnable = base is known; otherwise false)"
-						},
-						"magicEffect": {
-							"$ref": "#/$defs/effectMatchers"
-						}
-					},
-					"additionalProperties": false
-				},
-				"poison": {
-					"type": "object",
-					"description": "Match poisoned items. Pass {} to match any poisoned item.",
-					"properties": {
-						"magicEffect": {
-							"$ref": "#/$defs/effectMatchers"
-						}
-					},
-					"additionalProperties": false
-				},
-				"tempered": {
-					"type": "object",
-					"properties": {
-						"min": {
-							"type": "number"
-						},
-						"max": {
-							"type": "number"
-						}
-					},
-					"minProperties": 1
-				},
-				"magicEffect": {
-					"$ref": "#/$defs/effectMatchers"
-				},
-				"not": {
-					"description": "Negates inner conditions. Object: AND-combined then negated. Array: each element independently negated, all must pass (AND of NOTs).",
-					"oneOf": [
-						{
-							"$ref": "#/$defs/match"
-						},
-						{
-							"type": "array",
-							"items": {
-								"$ref": "#/$defs/match"
-							}
-						}
-					]
-				}
-			},
-			"additionalProperties": false
-		}
-	}
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "SIF Rule Config",
+  "description": "Rule files loaded from Data/SKSE/Plugins/SIF/*.json. Global settings in Data/SKSE/Plugins/SIF.json are configured separately.",
+  "type": "object",
+  "required": [
+    "rules"
+  ],
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/rule"
+      }
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "rule": {
+      "type": "object",
+      "required": [
+        "icon",
+        "match"
+      ],
+      "properties": {
+        "icon": {
+          "$ref": "#/$defs/icon"
+        },
+        "match": {
+          "$ref": "#/$defs/match"
+        }
+      },
+      "additionalProperties": false
+    },
+    "icon": {
+      "type": "object",
+      "required": [
+        "source",
+        "label"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "description": "SWF path relative to Interface/."
+        },
+        "label": {
+          "type": "string",
+          "description": "Export name inside the SWF."
+        },
+        "fadeMaxDistance": {
+          "type": "number",
+          "description": "Hard distance cutoff for this icon."
+        },
+        "fadeStartDistance": {
+          "type": "number",
+          "description": "Distance at which this icon begins fading."
+        },
+        "maxInstances": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 48,
+          "description": "Per-label simultaneous instance limit for this rule."
+        }
+      },
+      "additionalProperties": false
+    },
+    "formId": {
+      "type": "string",
+      "pattern": "^.+\\|0x[0-9A-Fa-f]+$"
+    },
+    "formIdOrArray": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/formId"
+        },
+        {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/formId"
+          }
+        }
+      ]
+    },
+    "rangeObject": {
+      "type": "object",
+      "properties": {
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        }
+      },
+      "minProperties": 1,
+      "additionalProperties": false
+    },
+    "match": {
+      "type": "object",
+      "description": "Top-level fields are AND-combined. Empty match objects are allowed.",
+      "properties": {
+        "formType": {
+          "type": "string",
+          "enum": [
+            "NPC",
+            "Door"
+          ]
+        },
+        "formId": {
+          "$ref": "#/$defs/formIdOrArray"
+        },
+        "baseFormId": {
+          "$ref": "#/$defs/formIdOrArray"
+        },
+        "keywords": {
+          "$ref": "#/$defs/formIdOrArray"
+        },
+        "isQuestAlias": {
+          "type": "boolean"
+        },
+        "worldspaceFormId": {
+          "$ref": "#/$defs/formIdOrArray"
+        },
+        "locationFormId": {
+          "$ref": "#/$defs/formIdOrArray"
+        },
+        "conditionPerk": {
+          "$ref": "#/$defs/formId"
+        },
+        "raceFormId": {
+          "$ref": "#/$defs/formIdOrArray"
+        },
+        "level": {
+          "$ref": "#/$defs/rangeObject"
+        },
+        "isDead": {
+          "type": "boolean"
+        },
+        "isHostile": {
+          "type": "boolean"
+        },
+        "isEssential": {
+          "type": "boolean"
+        },
+        "isProtected": {
+          "type": "boolean"
+        },
+        "isPlayerTeammate": {
+          "type": "boolean"
+        },
+        "isInCombat": {
+          "type": "boolean"
+        },
+        "not": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/match"
+            },
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/match"
+              }
+            }
+          ]
+        },
+        "anyOf": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/match"
+          }
+        }
+      },
+      "patternProperties": {
+        "^\\$": {}
+      },
+      "additionalProperties": false
+    }
+  }
 }

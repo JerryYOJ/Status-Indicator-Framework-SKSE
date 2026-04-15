@@ -6,8 +6,8 @@ namespace Config {
     struct IconData {
         std::string source; // SWF path
         std::string label;  // Export label
-        float renderDistance{ 1800.0f }; // Max distance to render this icon
-        float fadeDistance{ 300.0f };    // Distance at which alpha starts fading
+        float fadeMaxDistance{ 1800.0f };   // Distance at which alpha reaches 0 (hard render cutoff)
+        float fadeStartDistance{ 300.0f }; // Distance at which alpha begins fading
         std::uint32_t maxInstances{ 5 }; // Max simultaneous instances attached for this icon
     };
 

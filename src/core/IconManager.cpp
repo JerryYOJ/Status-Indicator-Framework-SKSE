@@ -1,44 +1,33 @@
 #include "IconManager.h"
 
-#include "../config/ConfigManager.h"
 #include "../swfhelper/ImportData.h"
 
 #include <algorithm>
 #include <string>
 #include <format>
 
-constexpr float kMinFadeDistance = 300.0f;
-constexpr float kMaxFadeDistance = 1800.0f;
-
-//TODO: this need to be a config option, with those menu frameworks
-constexpr float kActorOffsetZ = 20.0f;
 
 constexpr float kProjectionZeroTolerance = 1e-5f;
 
-constexpr float kScaleDepthNear = 200.0f;
-constexpr float kScaleDepthFar  = 1000.0f;
-constexpr float kScaleMin       = 35.0f;
-constexpr float kScaleMax       = 100.0f;
-
-static float CalculateAlpha(float distance)
+static float CalculateAlpha(float distance, float fadeStart, float fadeMax)
 {
 	float alpha = 100.0f;
 
-	if (distance > kMinFadeDistance) {
-		alpha = ((distance - kMaxFadeDistance) / (kMinFadeDistance - kMaxFadeDistance)) * 100.0f;
+	if (distance > fadeStart) {
+		alpha = ((distance - fadeMax) / (fadeStart - fadeMax)) * 100.0f;
 	}
 
 	return std::clamp(alpha, 0.0f, 100.0f);
 }
 
-static float CalculateScale(float depth)
+static float CalculateScale(float depth, const Config::Settings& s)
 {
 	static float* g_fNear = reinterpret_cast<float*>(RELOCATION_ID(517032, 403540).address() + 0x40);
 	static float* g_fFar  = reinterpret_cast<float*>(RELOCATION_ID(517032, 403540).address() + 0x44);
 
 	const float linearizedDepth = (*g_fNear * *g_fFar) / (*g_fFar + depth * (*g_fNear - *g_fFar));
-	const float scaleMult = std::clamp(linearizedDepth, kScaleDepthNear, kScaleDepthFar);
-	return (((scaleMult - kScaleDepthNear) * (kScaleMin - kScaleMax)) / (kScaleDepthFar - kScaleDepthNear)) + kScaleMax;
+	const float scaleMult = std::clamp(linearizedDepth, s.scaleDepthNear, s.scaleDepthFar);
+	return (((scaleMult - s.scaleDepthNear) * (s.scaleMin - s.scaleMax)) / (s.scaleDepthFar - s.scaleDepthNear)) + s.scaleMax;
 }
 
 static bool GetNodePosition(RE::Actor* actor, const char* nodeName, RE::NiPoint3& point)
@@ -181,10 +170,12 @@ void IconManager::RenderIcons(RE::FloatingQuestMarker* thiz)
 
 	auto* player        = RE::PlayerCharacter::GetSingleton();
 	auto* configManager = Config::ConfigManager::getInstance();
+	const auto& settings = configManager->GetSettings();
 
 	// per-label slot counters, consumed across all actors this frame
 	std::unordered_map<std::string, std::size_t> slotCounters;
 
+	// Actors
 	RE::ProcessLists::GetSingleton()->ForEachHighActor([&](RE::Actor* actor) -> RE::BSContainer::ForEachResult {
 		if (!actor || actor->IsDeleted() || actor->IsDisabled())
 			return RE::BSContainer::ForEachResult::kContinue;
@@ -193,7 +184,7 @@ void IconManager::RenderIcons(RE::FloatingQuestMarker* thiz)
 		if (!GetTargetPos(actor, worldPos, false))
 			return RE::BSContainer::ForEachResult::kContinue;
 
-		worldPos.z += kActorOffsetZ;
+		worldPos.z += settings.actorOffsetZ;
 
 		float x = 0.0f;
 		float y = 0.0f;
@@ -206,7 +197,7 @@ void IconManager::RenderIcons(RE::FloatingQuestMarker* thiz)
 		// filter: collect (icon, slot) pairs, consuming counters immediately on inclusion
 		std::vector<std::pair<const Config::IconData*, std::size_t>> renderable;
 		for (const auto* iconData : configManager->GetIcons(actor)) {
-			if (distance > iconData->renderDistance)
+			if (distance > iconData->fadeMaxDistance)
 				continue;
 			if (!_pools.contains(iconData->label))
 				continue;
@@ -220,33 +211,78 @@ void IconManager::RenderIcons(RE::FloatingQuestMarker* thiz)
 			return RE::BSContainer::ForEachResult::kContinue;
 
 		// center the icon row horizontally on the projected position
-		const float scaledSpacing = kIconSpacing * (CalculateScale(depth) / kScaleMax);
+		const float scaledSpacing = settings.iconSpacing * (CalculateScale(depth, settings) / settings.scaleMax);
 		const float totalWidth = (static_cast<float>(renderable.size()) - 1.0f) * scaledSpacing;
 		float iconX = x - totalWidth / 2.0f;
 
 		for (const auto& [iconData, slot] : renderable) {
-			ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth);
+			ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, iconData->fadeStartDistance, iconData->fadeMaxDistance, settings);
 			iconX += scaledSpacing;
 		}
 
 		return RE::BSContainer::ForEachResult::kContinue;
 	});
+
+	//Load Zones
+	for (const auto& handle : _cachedRefs) {
+		auto ref = handle.get();
+		if (!ref || ref->IsDeleted() || ref->IsDisabled())
+			continue;
+
+		RE::NiPoint3 worldPos;
+		if (!GetTargetPos(ref.get(), worldPos))
+			continue;
+
+		worldPos.z += settings.markerOffsetZ;
+
+		float x = 0.0f;
+		float y = 0.0f;
+		float depth = 0.0f;
+		if (!ProjectToHud(thiz, worldPos, x, y, depth))
+			continue;
+
+		const float distance = player->GetPosition().GetDistance(worldPos);
+
+		std::vector<std::pair<const Config::IconData*, std::size_t>> renderable;
+		for (const auto* iconData : configManager->GetIcons(ref.get())) {
+			if (distance > iconData->fadeMaxDistance)
+				continue;
+			if (!_pools.contains(iconData->label))
+				continue;
+			auto& slot = slotCounters[iconData->label];
+			if (slot >= static_cast<std::size_t>(iconData->maxInstances))
+				continue;
+			renderable.emplace_back(iconData, slot++);
+		}
+
+		if (renderable.empty())
+			continue;
+
+		const float scaledSpacing = settings.iconSpacing * (CalculateScale(depth, settings) / settings.scaleMax);
+		const float totalWidth = (static_cast<float>(renderable.size()) - 1.0f) * scaledSpacing;
+		float iconX = x - totalWidth / 2.0f;
+
+		for (const auto& [iconData, slot] : renderable) {
+			ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, iconData->fadeStartDistance, iconData->fadeMaxDistance, settings);
+			iconX += scaledSpacing;
+		}
+	}
 }
 
-void IconManager::ShowIcon(RE::GFxValue& clip, float x, float y, float distance, float depth)
+void IconManager::ShowIcon(RE::GFxValue& clip, float x, float y, float distance, float depth, float fadeStart, float fadeMax, const Config::Settings& settings)
 {
 	if (!clip.IsDisplayObject()) {
 		return;
 	}
 
-	const float scale = CalculateScale(depth);
+	const float scale = CalculateScale(depth, settings);
 
 	RE::GFxValue::DisplayInfo displayInfo;
 	clip.GetDisplayInfo(&displayInfo);
 	displayInfo.SetX(x);
 	displayInfo.SetY(y);
 	displayInfo.SetRotation(0.0);
-	displayInfo.SetAlpha(CalculateAlpha(distance));
+	displayInfo.SetAlpha(CalculateAlpha(distance, fadeStart, fadeMax));
 	displayInfo.SetScale(scale, scale);
 	clip.SetDisplayInfo(displayInfo);
 }

@@ -26,6 +26,31 @@ namespace Config {
         );
     }
 
+    void ConfigManager::LoadSettings() {
+        const auto path = std::filesystem::path{"Data/SKSE/Plugins/SIF.json"};
+        if (!std::filesystem::exists(path)) return;
+
+        std::ifstream file(path);
+        if (!file.is_open()) return;
+
+        Json::Value root;
+        Json::CharReaderBuilder builder;
+        std::string errs;
+        if (!Json::parseFromStream(builder, file, &root, &errs)) {
+            logger::error("JSON parse error in SIF.json: {}", errs);
+            return;
+        }
+
+        auto& s = _settings;
+        if (root.isMember("actorOffsetZ"))   s.actorOffsetZ   = root["actorOffsetZ"].asFloat();
+        if (root.isMember("markerOffsetZ"))  s.markerOffsetZ  = root["markerOffsetZ"].asFloat();
+        if (root.isMember("iconSpacing"))    s.iconSpacing    = root["iconSpacing"].asFloat();
+        if (root.isMember("scaleDepthNear")) s.scaleDepthNear = root["scaleDepthNear"].asFloat();
+        if (root.isMember("scaleDepthFar"))  s.scaleDepthFar  = root["scaleDepthFar"].asFloat();
+        if (root.isMember("scaleMin"))       s.scaleMin       = root["scaleMin"].asFloat();
+        if (root.isMember("scaleMax"))       s.scaleMax       = root["scaleMax"].asFloat();
+    }
+
     void ConfigManager::LoadConfigs() {
         const auto dataPath =
             std::filesystem::path{"Data/SKSE/Plugins/SIF"};
@@ -35,6 +60,7 @@ namespace Config {
             return;
         }
 
+        LoadSettings();
         LoadExternalConditions();
 
         std::size_t fileCount = 0;
