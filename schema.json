@@ -231,6 +231,9 @@
         "isWitness": {
           "type": "boolean"
         },
+        "isWitnessedCrimeEstablished": {
+          "type": "boolean"
+        },
         "not": {
           "oneOf": [
             {

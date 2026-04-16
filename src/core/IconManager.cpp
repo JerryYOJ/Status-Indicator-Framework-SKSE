@@ -180,6 +180,10 @@ void IconManager::RenderIcons(RE::FloatingQuestMarker* thiz)
 		if (!actor || actor->IsDeleted() || actor->IsDisabled())
 			return RE::BSContainer::ForEachResult::kContinue;
 
+		const auto icons = configManager->GetIcons(actor);
+		if (icons.empty())
+			return RE::BSContainer::ForEachResult::kContinue;
+
 		RE::NiPoint3 worldPos;
 		if (!GetTargetPos(actor, worldPos, false))
 			return RE::BSContainer::ForEachResult::kContinue;
@@ -196,7 +200,7 @@ void IconManager::RenderIcons(RE::FloatingQuestMarker* thiz)
 
 		// filter: collect (icon, slot) pairs, consuming counters immediately on inclusion
 		std::vector<std::pair<const Config::IconData*, std::size_t>> renderable;
-		for (const auto* iconData : configManager->GetIcons(actor)) {
+		for (const auto* iconData : icons) {
 			if (distance > iconData->fadeMaxDistance)
 				continue;
 			if (!_pools.contains(iconData->label))
@@ -229,6 +233,10 @@ void IconManager::RenderIcons(RE::FloatingQuestMarker* thiz)
 		if (!ref || ref->IsDeleted() || ref->IsDisabled())
 			continue;
 
+		const auto icons = configManager->GetIcons(ref.get());
+		if (icons.empty())
+			continue;
+
 		RE::NiPoint3 worldPos;
 		if (!GetTargetPos(ref.get(), worldPos))
 			continue;
@@ -244,7 +252,7 @@ void IconManager::RenderIcons(RE::FloatingQuestMarker* thiz)
 		const float distance = player->GetPosition().GetDistance(worldPos);
 
 		std::vector<std::pair<const Config::IconData*, std::size_t>> renderable;
-		for (const auto* iconData : configManager->GetIcons(ref.get())) {
+		for (const auto* iconData : icons) {
 			if (distance > iconData->fadeMaxDistance)
 				continue;
 			if (!_pools.contains(iconData->label))

@@ -98,6 +98,7 @@ These only match when the ref is an actor.
 | `isPlayerTeammate` | bool | Matches follower/teammate state |
 | `isInCombat` | bool | Matches combat state |
 | `isWitness` | bool | True if the actor is in any of the player's active crime witness lists |
+| `isWitnessedCrimeEstablished` | bool | True if the actor is a witness on one of the player's crimes and that crime's `crimeEstablished` flag is set |
 
 ### `magicEffect`
 
@@ -337,6 +338,38 @@ Hostile NPCs in combat:
     "formType": "NPC",
     "isHostile": true,
     "isInCombat": true
+  }
+}
+```
+
+Witnesses on crimes that can still be cleared by killing them:
+
+```json
+{
+  "icon": {
+    "source": "SIF/crime.swf",
+    "label": "WhiteWitnessIcon"
+  },
+  "match": {
+    "formType": "NPC",
+    "isWitness": true,
+    "not": { "isWitnessedCrimeEstablished": true }
+  }
+}
+```
+
+Witnesses on crimes that have already become established:
+
+```json
+{
+  "icon": {
+    "source": "SIF/crime.swf",
+    "label": "RedWitnessIcon"
+  },
+  "match": {
+    "formType": "NPC",
+    "isWitness": true,
+    "isWitnessedCrimeEstablished": true
   }
 }
 ```
