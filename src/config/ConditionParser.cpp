@@ -417,16 +417,26 @@ namespace Config
 				[](RE::TESObjectREFR* ref) -> bool {
 					auto* actor = ref->As<RE::Actor>();
 					if (!actor) return false;
+
 					auto* player = RE::PlayerCharacter::GetSingleton();
 					if (!player) return false;
-					auto* crimeExtra = player->extraList.GetByType<RE::ExtraPlayerCrimeList>();
-					if (!crimeExtra || !crimeExtra->crimes) return false;
-					const auto handle = actor->GetHandle();
-					for (auto* crime : *crimeExtra->crimes) {
-						if (!crime) continue;
-						for (const auto& witness : crime->actorsKnowOfCrime)
-							if (witness == handle) return true;
+
+					auto* processLists = RE::ProcessLists::GetSingleton();
+					if (!processLists) return false;
+
+					const auto playerHandle = player->GetHandle();
+					const auto actorHandle = actor->GetHandle();
+					for (auto* crimeList : processLists->globalCrimes) {
+						if (!crimeList) continue;
+
+						for (auto* crime : *crimeList) {
+							if (!crime || *(RE::ActorHandle*)((char*)crime + 0xC) != playerHandle) continue; //0C = criminalHandle
+
+							for (const auto& witness : crime->actorsKnowOfCrime)
+								if (witness == actorHandle) return true;
+						}
 					}
+
 					return false;
 				});
 		}},
