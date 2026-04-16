@@ -1,5 +1,8 @@
 #pragma once
 
+#include "conditions/EffectMatcher.h"
+#include "conditions/EncounterZoneMatcher.h"
+
 #include <functional>
 #include <memory>
 #include <optional>
@@ -169,6 +172,34 @@ namespace Config
 
 	private:
 		RE::BGSPerk* _perk;
+	};
+
+	class MagicEffectCondition final : public Condition
+	{
+	public:
+		void AddMatcher(std::unique_ptr<EffectMatcher> matcher)
+		{
+			_matchers.push_back(std::move(matcher));
+		}
+
+		bool Match(RE::TESObjectREFR* ref) const override;
+
+	private:
+		std::vector<std::unique_ptr<EffectMatcher>> _matchers;
+	};
+
+	class EncounterZoneCondition final : public Condition
+	{
+	public:
+		void AddMatcher(std::unique_ptr<EncounterZoneMatcher> matcher)
+		{
+			_matchers.push_back(std::move(matcher));
+		}
+
+		bool Match(RE::TESObjectREFR* ref) const override;
+
+	private:
+		std::vector<std::unique_ptr<EncounterZoneMatcher>> _matchers;
 	};
 
 	class NotCondition final : public Condition

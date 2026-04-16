@@ -97,6 +97,75 @@
       "minProperties": 1,
       "additionalProperties": false
     },
+    "magicEffect": {
+      "type": "object",
+      "description": "Matches when one active effect on the actor satisfies all nested fields.",
+      "properties": {
+        "formId": {
+          "$ref": "#/$defs/formIdOrArray"
+        },
+        "keywords": {
+          "$ref": "#/$defs/formIdOrArray"
+        },
+        "school": {
+          "type": "string"
+        },
+        "primaryValue": {
+          "type": "string"
+        },
+        "secondaryValue": {
+          "type": "string"
+        },
+        "isHostile": {
+          "type": "boolean"
+        },
+        "isDetrimental": {
+          "type": "boolean"
+        }
+      },
+      "patternProperties": {
+        "^\\$": {}
+      },
+      "additionalProperties": false
+    },
+    "encounterZone": {
+      "type": "object",
+      "description": "Matches the resolved destination encounter zone for teleport-linked doors.",
+      "properties": {
+        "formId": {
+          "$ref": "#/$defs/formIdOrArray"
+        },
+        "locationFormId": {
+          "$ref": "#/$defs/formIdOrArray"
+        },
+        "level": {
+          "$ref": "#/$defs/rangeObject"
+        },
+        "deltaPlayerLevel": {
+          "oneOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/rangeObject"
+            }
+          ]
+        },
+        "neverResets": {
+          "type": "boolean"
+        },
+        "matchPCBelowMinimumLevel": {
+          "type": "boolean"
+        },
+        "disableCombatBoundary": {
+          "type": "boolean"
+        }
+      },
+      "patternProperties": {
+        "^\\$": {}
+      },
+      "additionalProperties": false
+    },
     "match": {
       "type": "object",
       "description": "Top-level fields are AND-combined. Empty match objects are allowed.",
@@ -129,6 +198,12 @@
         "conditionPerk": {
           "$ref": "#/$defs/formId"
         },
+        "magicEffect": {
+          "$ref": "#/$defs/magicEffect"
+        },
+        "encounterZone": {
+          "$ref": "#/$defs/encounterZone"
+        },
         "raceFormId": {
           "$ref": "#/$defs/formIdOrArray"
         },
@@ -151,6 +226,9 @@
           "type": "boolean"
         },
         "isInCombat": {
+          "type": "boolean"
+        },
+        "isWitness": {
           "type": "boolean"
         },
         "not": {

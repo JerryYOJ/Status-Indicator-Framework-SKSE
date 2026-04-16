@@ -5,11 +5,253 @@
 
 namespace Config
 {
+	std::unique_ptr<Condition> ConditionParser::BuildMagicEffect(const Json::Value& val, RE::FormType)
+	{
+		auto cond = std::make_unique<MagicEffectCondition>();
+
+		if (val.isObject()) {
+			for (const auto& name : val.getMemberNames()) {
+				if (name.empty() || name[0] == '$') {
+					continue;
+				}
+
+				if (auto matcher = BuildEffectMatcher(name, val[name])) {
+					cond->AddMatcher(std::move(matcher));
+				}
+			}
+		}
+
+		return cond;
+	}
+
+	std::unique_ptr<Condition> ConditionParser::BuildEncounterZone(const Json::Value& val, RE::FormType)
+	{
+		auto cond = std::make_unique<EncounterZoneCondition>();
+
+		if (val.isObject()) {
+			for (const auto& name : val.getMemberNames()) {
+				if (name.empty() || name[0] == '$') {
+					continue;
+				}
+
+				if (auto matcher = BuildEncounterZoneMatcher(name, val[name])) {
+					cond->AddMatcher(std::move(matcher));
+				}
+			}
+		}
+
+		return cond;
+	}
+
+	std::unique_ptr<EffectMatcher> ConditionParser::BuildEffectMatcher(const std::string& name, const Json::Value& val)
+	{
+		if (name == "formId") {
+			auto ids = ParseUtil::ParseFormIDArray(val);
+			if (!ids.empty()) {
+				return std::make_unique<EffectFormMatch>(std::move(ids),
+					[](RE::ActiveEffect* effect) -> RE::TESForm* {
+						return effect ? effect->GetBaseObject() : nullptr;
+					});
+			}
+			return nullptr;
+		}
+
+		if (name == "keywords") {
+			auto ids = ParseUtil::ParseFormIDArray(val);
+			if (ids.empty()) {
+				return nullptr;
+			}
+
+			std::vector<RE::BGSKeyword*> keywords;
+			for (auto id : ids) {
+				if (auto* keyword = RE::TESForm::LookupByID<RE::BGSKeyword>(id)) {
+					keywords.push_back(keyword);
+				}
+			}
+
+			if (!keywords.empty()) {
+				return std::make_unique<EffectKeywordMatch>(std::move(keywords));
+			}
+			return nullptr;
+		}
+
+		if (name == "school") {
+			if (!val.isString()) {
+				return nullptr;
+			}
+
+			const auto school = RE::ActorValueList::GetSingleton()->LookupActorValueByName(val.asCString());
+			if (school != RE::ActorValue::kNone) {
+				return std::make_unique<EffectExactMatch<RE::ActorValue>>(school,
+					[](RE::ActiveEffect* effect) -> RE::ActorValue {
+						auto* baseEffect = effect ? effect->GetBaseObject() : nullptr;
+						return baseEffect ? baseEffect->GetMagickSkill() : RE::ActorValue::kNone;
+					});
+			}
+			return nullptr;
+		}
+
+		if (name == "primaryValue") {
+			if (!val.isString()) {
+				return nullptr;
+			}
+
+			const auto actorValue = RE::ActorValueList::GetSingleton()->LookupActorValueByName(val.asCString());
+			if (actorValue != RE::ActorValue::kNone) {
+				return std::make_unique<EffectExactMatch<RE::ActorValue>>(actorValue,
+					[](RE::ActiveEffect* effect) -> RE::ActorValue {
+						auto* baseEffect = effect ? effect->GetBaseObject() : nullptr;
+						return baseEffect ? baseEffect->data.primaryAV : RE::ActorValue::kNone;
+					});
+			}
+			return nullptr;
+		}
+
+		if (name == "secondaryValue") {
+			if (!val.isString()) {
+				return nullptr;
+			}
+
+			const auto actorValue = RE::ActorValueList::GetSingleton()->LookupActorValueByName(val.asCString());
+			if (actorValue != RE::ActorValue::kNone) {
+				return std::make_unique<EffectExactMatch<RE::ActorValue>>(actorValue,
+					[](RE::ActiveEffect* effect) -> RE::ActorValue {
+						auto* baseEffect = effect ? effect->GetBaseObject() : nullptr;
+						return baseEffect ? baseEffect->data.secondaryAV : RE::ActorValue::kNone;
+					});
+			}
+			return nullptr;
+		}
+
+		if (name == "isHostile") {
+			if (val.isBool()) {
+				return std::make_unique<EffectExactMatch<bool>>(val.asBool(),
+					[](RE::ActiveEffect* effect) -> bool {
+						auto* baseEffect = effect ? effect->GetBaseObject() : nullptr;
+						return baseEffect && baseEffect->IsHostile();
+					});
+			}
+			return nullptr;
+		}
+
+		if (name == "isDetrimental") {
+			if (val.isBool()) {
+				return std::make_unique<EffectExactMatch<bool>>(val.asBool(),
+					[](RE::ActiveEffect* effect) -> bool {
+						auto* baseEffect = effect ? effect->GetBaseObject() : nullptr;
+						return baseEffect && baseEffect->IsDetrimental();
+					});
+			}
+			return nullptr;
+		}
+
+		logger::warn("Unknown magicEffect matcher: '{}'", name);
+		return nullptr;
+	}
+
+	std::unique_ptr<EncounterZoneMatcher> ConditionParser::BuildEncounterZoneMatcher(const std::string& name, const Json::Value& val)
+	{
+		if (name == "formId") {
+			auto ids = ParseUtil::ParseFormIDArray(val);
+			if (!ids.empty()) {
+				return std::make_unique<EncounterZoneFormMatch>(std::move(ids),
+					[](RE::BGSEncounterZone* zone) -> RE::TESForm* {
+						return zone;
+					});
+			}
+			return nullptr;
+		}
+
+		if (name == "locationFormId") {
+			auto ids = ParseUtil::ParseFormIDArray(val);
+			if (!ids.empty()) {
+				return std::make_unique<EncounterZoneFormMatch>(std::move(ids),
+					[](RE::BGSEncounterZone* zone) -> RE::TESForm* {
+						return zone ? zone->data.location : nullptr;
+					});
+			}
+			return nullptr;
+		}
+
+		if (name == "level") {
+			if (!val.isObject()) {
+				return nullptr;
+			}
+
+			std::optional<float> min;
+			std::optional<float> max;
+			if (val["min"].isNumeric()) {
+				min = static_cast<float>(val["min"].asDouble());
+			}
+			if (val["max"].isNumeric()) {
+				max = static_cast<float>(val["max"].asDouble());
+			}
+
+			if (min || max) {
+				return std::make_unique<EncounterZoneLevelIntersectionMatch>(min, max);
+			}
+			return nullptr;
+		}
+
+		if (name == "deltaPlayerLevel") {
+			std::optional<float> min;
+			std::optional<float> max;
+
+			if (val.isNumeric()) {
+				const float exact = static_cast<float>(val.asDouble());
+				min = exact;
+				max = exact;
+			} else if (val.isObject()) {
+				if (val["min"].isNumeric()) {
+					min = static_cast<float>(val["min"].asDouble());
+				}
+				if (val["max"].isNumeric()) {
+					max = static_cast<float>(val["max"].asDouble());
+				}
+			}
+
+			if (min || max) {
+				return std::make_unique<EncounterZoneDeltaPlayerLevelMatch>(min, max);
+			}
+			return nullptr;
+		}
+
+		if (name == "neverResets") {
+			if (val.isBool()) {
+				return std::make_unique<EncounterZoneExactMatch<bool>>(val.asBool(),
+					[](RE::BGSEncounterZone* zone) -> bool {
+						return zone && zone->data.flags.all(RE::ENCOUNTER_ZONE_DATA::Flag::kNeverResets);
+					});
+			}
+			return nullptr;
+		}
+
+		if (name == "matchPCBelowMinimumLevel") {
+			if (val.isBool()) {
+				return std::make_unique<EncounterZoneExactMatch<bool>>(val.asBool(),
+					[](RE::BGSEncounterZone* zone) -> bool {
+						return zone && zone->data.flags.all(RE::ENCOUNTER_ZONE_DATA::Flag::kMatchPCBelowMinimumLevel);
+					});
+			}
+			return nullptr;
+		}
+
+		if (name == "disableCombatBoundary") {
+			if (val.isBool()) {
+				return std::make_unique<EncounterZoneExactMatch<bool>>(val.asBool(),
+					[](RE::BGSEncounterZone* zone) -> bool {
+						return zone && zone->data.flags.all(RE::ENCOUNTER_ZONE_DATA::Flag::kDisableCombatBoundary);
+					});
+			}
+			return nullptr;
+		}
+
+		logger::warn("Unknown encounterZone matcher: '{}'", name);
+		return nullptr;
+	}
 
 	std::map<std::string, ConditionParser::Builder, CaseInsensitiveCompare> ConditionParser::BuilderMap =
 	{
-		// ── ref conditions ────────────────────────────────────────────────────
-
 		{ "formType", [](const Json::Value& val, RE::FormType) -> std::unique_ptr<Condition> {
 			if (!val.isString()) return nullptr;
 			static const std::unordered_map<std::string, RE::FormType> kMap{
@@ -86,7 +328,8 @@ namespace Config
 			return std::make_unique<PerkCondition>(perk);
 		}},
 
-		// ── actor conditions ──────────────────────────────────────────────────
+		{ "magicEffect", BuildMagicEffect },
+		{ "encounterZone", BuildEncounterZone },
 
 		{ "raceFormId", [](const Json::Value& val, RE::FormType) -> std::unique_ptr<Condition> {
 			auto ids = ParseUtil::ParseFormIDArray(val);
@@ -168,7 +411,25 @@ namespace Config
 				});
 		}},
 
-		// ── logical operators ─────────────────────────────────────────────────
+		{ "isWitness", [](const Json::Value& val, RE::FormType) -> std::unique_ptr<Condition> {
+			if (!val.isBool()) return nullptr;
+			return std::make_unique<BoolCondition>(val.asBool(),
+				[](RE::TESObjectREFR* ref) -> bool {
+					auto* actor = ref->As<RE::Actor>();
+					if (!actor) return false;
+					auto* player = RE::PlayerCharacter::GetSingleton();
+					if (!player) return false;
+					auto* crimeExtra = player->extraList.GetByType<RE::ExtraPlayerCrimeList>();
+					if (!crimeExtra || !crimeExtra->crimes) return false;
+					const auto handle = actor->GetHandle();
+					for (auto* crime : *crimeExtra->crimes) {
+						if (!crime) continue;
+						for (const auto& witness : crime->actorsKnowOfCrime)
+							if (witness == handle) return true;
+					}
+					return false;
+				});
+		}},
 
 		{ "not", [](const Json::Value& val, RE::FormType formType) -> std::unique_ptr<Condition> {
 			auto buildNot = [&](const Json::Value& obj) -> std::unique_ptr<Condition> {

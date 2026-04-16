@@ -92,7 +92,7 @@ static bool GetTargetPos(RE::TESObjectREFR* target, RE::NiPoint3& pos, bool getT
 			pos = target->GetLookingAtLocation();
 		}
 	} else {
-		pos = target->GetPosition();
+		pos = target->GetLookingAtLocation();
 	}
 
 	return true;

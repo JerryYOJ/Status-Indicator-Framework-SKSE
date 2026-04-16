@@ -63,9 +63,10 @@ Notes:
 All top-level fields in `match` are AND-combined.
 
 - If `match` is empty, the rule currently matches everything.
-- Field names are case-insensitive in the built-in parser.
+- Top-level field names are case-insensitive in the built-in parser.
+- Nested field names inside `magicEffect` and `encounterZone` are currently case-sensitive.
 - `not` and `anyOf` are supported.
-- Keys inside `match` that start with `$` are ignored by the parser.
+- Keys inside `match`, `magicEffect`, and `encounterZone` that start with `$` are ignored by the parser.
 
 ### Reference Conditions
 
@@ -96,6 +97,80 @@ These only match when the ref is an actor.
 | `isProtected` | bool | Matches protected flag |
 | `isPlayerTeammate` | bool | Matches follower/teammate state |
 | `isInCombat` | bool | Matches combat state |
+| `isWitness` | bool | True if the actor is in any of the player's active crime witness lists |
+
+### `magicEffect`
+
+`magicEffect` is a nested actor matcher.
+
+- The ref must be an actor.
+- The actor must currently have at least one active effect.
+- One active effect must satisfy every field inside `magicEffect`.
+
+Supported fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `formId` | string or array | Matches the active effect base `EffectSetting` FormID |
+| `keywords` | string or array | All listed keywords must exist on the active effect base `EffectSetting` |
+| `school` | string | Matches `EffectSetting::GetMagickSkill()` using actor value names such as `Destruction` |
+| `primaryValue` | string | Matches `EffectSetting::data.primaryAV` using actor value names such as `Health` |
+| `secondaryValue` | string | Matches `EffectSetting::data.secondaryAV` using actor value names |
+| `isHostile` | bool | Matches `EffectSetting::IsHostile()` |
+| `isDetrimental` | bool | Matches `EffectSetting::IsDetrimental()` |
+
+Example:
+
+```json
+{
+  "match": {
+    "formType": "NPC",
+    "magicEffect": {
+      "school": "Destruction",
+      "primaryValue": "Health",
+      "isHostile": true
+    }
+  }
+}
+```
+
+### `encounterZone`
+
+`encounterZone` is a nested object matcher.
+
+Current implementation behavior:
+
+- It only matches refs that have a teleport-linked door.
+- The zone is resolved from the linked destination ref.
+- There is currently no fallback to the source ref, parent cell, or worldspace zone in this matcher path.
+- The resolved zone must satisfy every field inside `encounterZone`.
+
+Supported fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `formId` | string or array | Matches the resolved encounter zone FormID |
+| `locationFormId` | string or array | Matches `BGSEncounterZone::data.location` |
+| `level` | object | Range intersection against the zone `minLevel`/`maxLevel`. Uses `{ "min": ..., "max": ... }` |
+| `deltaPlayerLevel` | number or object | Matches `currentEncounterLevel - playerLevel` where current encounter level is derived from zone min/max and `matchPCBelowMinimumLevel` |
+| `neverResets` | bool | Matches `kNeverResets` |
+| `matchPCBelowMinimumLevel` | bool | Matches `kMatchPCBelowMinimumLevel` |
+| `disableCombatBoundary` | bool | Matches `kDisableCombatBoundary` |
+
+Example:
+
+```json
+{
+  "match": {
+    "formType": "Door",
+    "encounterZone": {
+      "level": { "min": 20, "max": 40 },
+      "deltaPlayerLevel": { "min": 3 },
+      "neverResets": true
+    }
+  }
+}
+```
 
 ### Logical Operators
 
@@ -167,6 +242,15 @@ Current implementation only accepts object ranges for `level`:
 ```
 
 Bare numbers are not currently supported for `level`.
+
+`encounterZone.level` also uses object ranges only.
+
+`encounterZone.deltaPlayerLevel` accepts either:
+
+```json
+5
+{ "min": 0, "max": 10 }
+```
 
 ## Global Settings
 
@@ -253,6 +337,43 @@ Hostile NPCs in combat:
     "formType": "NPC",
     "isHostile": true,
     "isInCombat": true
+  }
+}
+```
+
+Actors with a hostile destruction health effect:
+
+```json
+{
+  "icon": {
+    "source": "SIF/status.swf",
+    "label": "FireDOT"
+  },
+  "match": {
+    "formType": "NPC",
+    "magicEffect": {
+      "school": "Destruction",
+      "primaryValue": "Health",
+      "isHostile": true
+    }
+  }
+}
+```
+
+Teleport doors leading to higher-level encounter zones:
+
+```json
+{
+  "icon": {
+    "source": "SIF/doors.swf",
+    "label": "DangerDoor"
+  },
+  "match": {
+    "formType": "Door",
+    "encounterZone": {
+      "level": { "min": 20 },
+      "deltaPlayerLevel": { "min": 5 }
+    }
   }
 }
 ```
