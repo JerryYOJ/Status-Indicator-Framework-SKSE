@@ -411,6 +411,36 @@ namespace Config
 				});
 		}},
 
+		{ "isWitnessedCrimeEstablished", [](const Json::Value& val, RE::FormType) -> std::unique_ptr<Condition> {
+			if (!val.isBool()) return nullptr;
+			return std::make_unique<BoolCondition>(val.asBool(),
+				[](RE::TESObjectREFR* ref) -> bool {
+					auto* actor = ref->As<RE::Actor>();
+					if (!actor) return false;
+
+					auto* player = RE::PlayerCharacter::GetSingleton();
+					if (!player) return false;
+
+					auto* processLists = RE::ProcessLists::GetSingleton();
+					if (!processLists) return false;
+
+					const auto playerHandle = player->GetHandle();
+					const auto actorHandle = actor->GetHandle();
+					for (auto* crimeList : processLists->globalCrimes) {
+						if (!crimeList) continue;
+
+						for (auto* crime : *crimeList) {
+							if (!crime || *(RE::ActorHandle*)((char*)crime + 0xC) != playerHandle) continue; //0C = criminalHandle
+
+							for (const auto& witness : crime->actorsKnowOfCrime)
+								if (witness == actorHandle) return *(bool*)((char*)crime + 0x68); //68 = crimeEstablished
+						}
+					}
+
+					return false;
+				});
+		}},
+
 		{ "isWitness", [](const Json::Value& val, RE::FormType) -> std::unique_ptr<Condition> {
 			if (!val.isBool()) return nullptr;
 			return std::make_unique<BoolCondition>(val.asBool(),
