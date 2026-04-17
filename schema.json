@@ -104,17 +104,88 @@
         "formId": {
           "$ref": "#/$defs/formIdOrArray"
         },
+        "effectId": {
+          "$ref": "#/$defs/formIdOrArray"
+        },
         "keywords": {
+          "$ref": "#/$defs/formIdOrArray"
+        },
+        "effectKeywords": {
           "$ref": "#/$defs/formIdOrArray"
         },
         "school": {
           "type": "string"
         },
+        "magnitude": {
+          "oneOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/rangeObject"
+            }
+          ]
+        },
+        "duration": {
+          "oneOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/rangeObject"
+            }
+          ]
+        },
+        "area": {
+          "oneOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/rangeObject"
+            }
+          ]
+        },
+        "archetype": {
+          "type": "string"
+        },
+        "deliveryType": {
+          "type": "string"
+        },
+        "castType": {
+          "type": "string"
+        },
         "primaryValue": {
+          "type": "string"
+        },
+        "resistance": {
           "type": "string"
         },
         "secondaryValue": {
           "type": "string"
+        },
+        "effectFlags": {
+          "oneOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ]
+        },
+        "skillLevel": {
+          "oneOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/rangeObject"
+            }
+          ]
         },
         "isHostile": {
           "type": "boolean"

@@ -113,10 +113,21 @@ Supported fields:
 | Field | Type | Description |
 |---|---|---|
 | `formId` | string or array | Matches the active effect base `EffectSetting` FormID |
+| `effectId` | string or array | Alias of `formId` |
 | `keywords` | string or array | All listed keywords must exist on the active effect base `EffectSetting` |
+| `effectKeywords` | string or array | Alias of `keywords` |
 | `school` | string | Matches `EffectSetting::GetMagickSkill()` using actor value names such as `Destruction` |
+| `magnitude` | number or object | Matches active-effect magnitude. Supports exact numbers or `{ "min": ..., "max": ... }` |
+| `duration` | number or object | Matches active-effect duration. Supports exact numbers or `{ "min": ..., "max": ... }` |
+| `area` | number or object | Matches the underlying effect area. Supports exact numbers or `{ "min": ..., "max": ... }` |
+| `archetype` | string | Matches `EffectSetting::GetArchetype()` |
+| `deliveryType` | string | Matches `EffectSetting::data.delivery` |
+| `castType` | string | Matches `EffectSetting::data.castingType` |
 | `primaryValue` | string | Matches `EffectSetting::data.primaryAV` using actor value names such as `Health` |
+| `resistance` | string | Matches `EffectSetting::data.resistVariable` using names such as `FireResist` or `MagicResist` |
 | `secondaryValue` | string | Matches `EffectSetting::data.secondaryAV` using actor value names |
+| `effectFlags` | string or array | Matches any listed `EffectSetting::data.flags` bits |
+| `skillLevel` | number or object | Matches `EffectSetting::GetMinimumSkillLevel()` |
 | `isHostile` | bool | Matches `EffectSetting::IsHostile()` |
 | `isDetrimental` | bool | Matches `EffectSetting::IsDetrimental()` |
 

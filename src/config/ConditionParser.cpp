@@ -45,7 +45,7 @@ namespace Config
 
 	std::unique_ptr<EffectMatcher> ConditionParser::BuildEffectMatcher(const std::string& name, const Json::Value& val)
 	{
-		if (name == "formId") {
+		if (name == "formId" || name == "effectId") {
 			auto ids = ParseUtil::ParseFormIDArray(val);
 			if (!ids.empty()) {
 				return std::make_unique<EffectFormMatch>(std::move(ids),
@@ -56,7 +56,7 @@ namespace Config
 			return nullptr;
 		}
 
-		if (name == "keywords") {
+		if (name == "keywords" || name == "effectKeywords") {
 			auto ids = ParseUtil::ParseFormIDArray(val);
 			if (ids.empty()) {
 				return nullptr;
@@ -75,12 +75,102 @@ namespace Config
 			return nullptr;
 		}
 
+		if (name == "magnitude") {
+			if (val.isNumeric()) {
+				const float exact = static_cast<float>(val.asDouble());
+				return std::make_unique<EffectRangeMatch>(exact, exact,
+					[](RE::ActiveEffect* effect) -> float {
+						return effect ? effect->magnitude : 0.0f;
+					});
+			}
+
+			if (val.isObject()) {
+				std::optional<float> min;
+				std::optional<float> max;
+				if (val["min"].isNumeric()) {
+					min = static_cast<float>(val["min"].asDouble());
+				}
+				if (val["max"].isNumeric()) {
+					max = static_cast<float>(val["max"].asDouble());
+				}
+				if (min || max) {
+					return std::make_unique<EffectRangeMatch>(min, max,
+						[](RE::ActiveEffect* effect) -> float {
+							return effect ? effect->magnitude : 0.0f;
+						});
+				}
+			}
+			return nullptr;
+		}
+
+		if (name == "duration") {
+			if (val.isNumeric()) {
+				const float exact = static_cast<float>(val.asDouble());
+				return std::make_unique<EffectRangeMatch>(exact, exact,
+					[](RE::ActiveEffect* effect) -> float {
+						return effect ? effect->duration : 0.0f;
+					});
+			}
+
+			if (val.isObject()) {
+				std::optional<float> min;
+				std::optional<float> max;
+				if (val["min"].isNumeric()) {
+					min = static_cast<float>(val["min"].asDouble());
+				}
+				if (val["max"].isNumeric()) {
+					max = static_cast<float>(val["max"].asDouble());
+				}
+				if (min || max) {
+					return std::make_unique<EffectRangeMatch>(min, max,
+						[](RE::ActiveEffect* effect) -> float {
+							return effect ? effect->duration : 0.0f;
+						});
+				}
+			}
+			return nullptr;
+		}
+
+		if (name == "area") {
+			if (val.isNumeric()) {
+				const float exact = static_cast<float>(val.asDouble());
+				return std::make_unique<EffectRangeMatch>(exact, exact,
+					[](RE::ActiveEffect* effect) -> float {
+						return effect && effect->effect ? static_cast<float>(effect->effect->GetArea()) : 0.0f;
+					});
+			}
+
+			if (val.isObject()) {
+				std::optional<float> min;
+				std::optional<float> max;
+				if (val["min"].isNumeric()) {
+					min = static_cast<float>(val["min"].asDouble());
+				}
+				if (val["max"].isNumeric()) {
+					max = static_cast<float>(val["max"].asDouble());
+				}
+				if (min || max) {
+					return std::make_unique<EffectRangeMatch>(min, max,
+						[](RE::ActiveEffect* effect) -> float {
+							return effect && effect->effect ? static_cast<float>(effect->effect->GetArea()) : 0.0f;
+						});
+				}
+			}
+			return nullptr;
+		}
+
 		if (name == "school") {
 			if (!val.isString()) {
 				return nullptr;
 			}
 
-			const auto school = RE::ActorValueList::GetSingleton()->LookupActorValueByName(val.asCString());
+			RE::ActorValue school = RE::ActorValue::kNone;
+			if (school == RE::ActorValue::kNone) {
+				TryGetEnum(kSchoolMap, val.asString(), school);
+			}
+			if (school == RE::ActorValue::kNone) {
+				school = RE::ActorValueList::GetSingleton()->LookupActorValueByName(val.asCString());
+			}
 			if (school != RE::ActorValue::kNone) {
 				return std::make_unique<EffectExactMatch<RE::ActorValue>>(school,
 					[](RE::ActiveEffect* effect) -> RE::ActorValue {
@@ -91,12 +181,66 @@ namespace Config
 			return nullptr;
 		}
 
+		if (name == "archetype") {
+			if (!val.isString()) {
+				return nullptr;
+			}
+
+			RE::EffectArchetype archetype = RE::EffectArchetype::kNone;
+			if (TryGetEnum(kArchetypeMap, val.asString(), archetype)) {
+				return std::make_unique<EffectExactMatch<RE::EffectArchetype>>(archetype,
+					[](RE::ActiveEffect* effect) -> RE::EffectArchetype {
+						auto* baseEffect = effect ? effect->GetBaseObject() : nullptr;
+						return baseEffect ? baseEffect->GetArchetype() : RE::EffectArchetype::kNone;
+					});
+			}
+			return nullptr;
+		}
+
+		if (name == "deliveryType") {
+			if (!val.isString()) {
+				return nullptr;
+			}
+
+			RE::MagicSystem::Delivery delivery = RE::MagicSystem::Delivery::kSelf;
+			if (TryGetEnum(kDeliveryTypeMap, val.asString(), delivery)) {
+				return std::make_unique<EffectExactMatch<RE::MagicSystem::Delivery>>(delivery,
+					[](RE::ActiveEffect* effect) -> RE::MagicSystem::Delivery {
+						auto* baseEffect = effect ? effect->GetBaseObject() : nullptr;
+						return baseEffect ? baseEffect->data.delivery : RE::MagicSystem::Delivery::kSelf;
+					});
+			}
+			return nullptr;
+		}
+
+		if (name == "castType") {
+			if (!val.isString()) {
+				return nullptr;
+			}
+
+			RE::MagicSystem::CastingType castType = RE::MagicSystem::CastingType::kConstantEffect;
+			if (TryGetEnum(kCastingTypeMap, val.asString(), castType)) {
+				return std::make_unique<EffectExactMatch<RE::MagicSystem::CastingType>>(castType,
+					[](RE::ActiveEffect* effect) -> RE::MagicSystem::CastingType {
+						auto* baseEffect = effect ? effect->GetBaseObject() : nullptr;
+						return baseEffect ? baseEffect->data.castingType : RE::MagicSystem::CastingType::kConstantEffect;
+					});
+			}
+			return nullptr;
+		}
+
 		if (name == "primaryValue") {
 			if (!val.isString()) {
 				return nullptr;
 			}
 
-			const auto actorValue = RE::ActorValueList::GetSingleton()->LookupActorValueByName(val.asCString());
+			RE::ActorValue actorValue = RE::ActorValue::kNone;
+			if (actorValue == RE::ActorValue::kNone) {
+				TryGetEnum(kActorValueMap, val.asString(), actorValue);
+			}
+			if (actorValue == RE::ActorValue::kNone) {
+				actorValue = RE::ActorValueList::GetSingleton()->LookupActorValueByName(val.asCString());
+			}
 			if (actorValue != RE::ActorValue::kNone) {
 				return std::make_unique<EffectExactMatch<RE::ActorValue>>(actorValue,
 					[](RE::ActiveEffect* effect) -> RE::ActorValue {
@@ -107,12 +251,38 @@ namespace Config
 			return nullptr;
 		}
 
+		if (name == "resistance") {
+			if (!val.isString()) {
+				return nullptr;
+			}
+
+			RE::ActorValue resistance = RE::ActorValue::kNone;
+			TryGetEnum(kResistanceMap, val.asString(), resistance);
+			if (resistance == RE::ActorValue::kNone) {
+				resistance = RE::ActorValueList::GetSingleton()->LookupActorValueByName(val.asCString());
+			}
+			if (resistance != RE::ActorValue::kNone) {
+				return std::make_unique<EffectExactMatch<RE::ActorValue>>(resistance,
+					[](RE::ActiveEffect* effect) -> RE::ActorValue {
+						auto* baseEffect = effect ? effect->GetBaseObject() : nullptr;
+						return baseEffect ? baseEffect->data.resistVariable : RE::ActorValue::kNone;
+					});
+			}
+			return nullptr;
+		}
+
 		if (name == "secondaryValue") {
 			if (!val.isString()) {
 				return nullptr;
 			}
 
-			const auto actorValue = RE::ActorValueList::GetSingleton()->LookupActorValueByName(val.asCString());
+			RE::ActorValue actorValue = RE::ActorValue::kNone;
+			if (actorValue == RE::ActorValue::kNone) {
+				TryGetEnum(kActorValueMap, val.asString(), actorValue);
+			}
+			if (actorValue == RE::ActorValue::kNone) {
+				actorValue = RE::ActorValueList::GetSingleton()->LookupActorValueByName(val.asCString());
+			}
 			if (actorValue != RE::ActorValue::kNone) {
 				return std::make_unique<EffectExactMatch<RE::ActorValue>>(actorValue,
 					[](RE::ActiveEffect* effect) -> RE::ActorValue {
@@ -141,6 +311,63 @@ namespace Config
 						auto* baseEffect = effect ? effect->GetBaseObject() : nullptr;
 						return baseEffect && baseEffect->IsDetrimental();
 					});
+			}
+			return nullptr;
+		}
+
+		if (name == "effectFlags") {
+			std::uint32_t combinedFlags = 0;
+			auto processFlag = [&](const Json::Value& flagValue) {
+				if (!flagValue.isString()) {
+					return;
+				}
+
+				RE::EffectSetting::EffectSettingData::Flag flag = RE::EffectSetting::EffectSettingData::Flag::kNone;
+				if (TryGetEnum(kEffectFlagMap, flagValue.asString(), flag)) {
+					combinedFlags |= static_cast<std::uint32_t>(flag);
+				}
+			};
+
+			if (val.isString()) {
+				processFlag(val);
+			} else if (val.isArray()) {
+				for (const auto& elem : val) {
+					processFlag(elem);
+				}
+			}
+
+			if (combinedFlags != 0) {
+				return std::make_unique<EffectBitfieldMatch>(combinedFlags);
+			}
+			return nullptr;
+		}
+
+		if (name == "skillLevel") {
+			if (val.isNumeric()) {
+				const float exact = static_cast<float>(val.asDouble());
+				return std::make_unique<EffectRangeMatch>(exact, exact,
+					[](RE::ActiveEffect* effect) -> float {
+						auto* baseEffect = effect ? effect->GetBaseObject() : nullptr;
+						return baseEffect ? static_cast<float>(baseEffect->GetMinimumSkillLevel()) : 0.0f;
+					});
+			}
+
+			if (val.isObject()) {
+				std::optional<float> min;
+				std::optional<float> max;
+				if (val["min"].isNumeric()) {
+					min = static_cast<float>(val["min"].asDouble());
+				}
+				if (val["max"].isNumeric()) {
+					max = static_cast<float>(val["max"].asDouble());
+				}
+				if (min || max) {
+					return std::make_unique<EffectRangeMatch>(min, max,
+						[](RE::ActiveEffect* effect) -> float {
+							auto* baseEffect = effect ? effect->GetBaseObject() : nullptr;
+							return baseEffect ? static_cast<float>(baseEffect->GetMinimumSkillLevel()) : 0.0f;
+						});
+				}
 			}
 			return nullptr;
 		}
