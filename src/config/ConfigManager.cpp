@@ -43,6 +43,7 @@ namespace Config {
 
         auto& s = _settings;
         if (root.isMember("actorOffsetZ"))   s.actorOffsetZ   = root["actorOffsetZ"].asFloat();
+        if (root.isMember("genericOffsetZ")) s.genericOffsetZ = root["genericOffsetZ"].asFloat();
         if (root.isMember("markerOffsetZ"))  s.markerOffsetZ  = root["markerOffsetZ"].asFloat();
         if (root.isMember("iconSpacing"))    s.iconSpacing    = root["iconSpacing"].asFloat();
         if (root.isMember("scaleDepthNear")) s.scaleDepthNear = root["scaleDepthNear"].asFloat();

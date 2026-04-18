@@ -14,7 +14,19 @@ static bool IsSuitableRef(RE::TESObjectREFR* ref)
 	}
 
 	const auto* baseObject = ref->GetBaseObject();
-	return baseObject && baseObject->GetFormType() == RE::FormType::Door && ref->extraList.GetTeleportLinkedDoor();
+	if (!baseObject) {
+		return false;
+	}
+
+	switch (baseObject->GetFormType()) {
+	case RE::FormType::Door:
+		return ref->extraList.GetTeleportLinkedDoor() && ref->extraList.GetTeleportLinkedDoor().get();
+	case RE::FormType::Container:
+	case RE::FormType::Activator:
+		return true;
+	default:
+		return false;
+	}
 }
 
 RE::BSEventNotifyControl CellAttachDetach::ProcessEvent(

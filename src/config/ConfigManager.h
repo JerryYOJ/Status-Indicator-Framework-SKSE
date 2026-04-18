@@ -5,6 +5,7 @@
 namespace Config {
     struct Settings {
         float actorOffsetZ{ 20.0f };
+        float genericOffsetZ{ 20.0f };
         float markerOffsetZ{ 20.0f };
         float iconSpacing{ 30.0f };
         float scaleDepthNear{ 200.0f };

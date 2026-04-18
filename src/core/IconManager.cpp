@@ -241,7 +241,10 @@ void IconManager::RenderIcons(RE::FloatingQuestMarker* thiz)
 		if (!GetTargetPos(ref.get(), worldPos))
 			continue;
 
-		worldPos.z += settings.markerOffsetZ;
+		const auto* baseObject = ref->GetBaseObject();
+		worldPos.z += baseObject && baseObject->GetFormType() == RE::FormType::Door ?
+			settings.markerOffsetZ :
+			settings.genericOffsetZ;
 
 		float x = 0.0f;
 		float y = 0.0f;

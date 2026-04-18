@@ -3,6 +3,8 @@
 
 #include <algorithm>
 
+#include "../RE/Crime.h"
+
 namespace Config
 {
 	std::unique_ptr<Condition> ConditionParser::BuildMagicEffect(const Json::Value& val, RE::FormType)
@@ -482,8 +484,10 @@ namespace Config
 		{ "formType", [](const Json::Value& val, RE::FormType) -> std::unique_ptr<Condition> {
 			if (!val.isString()) return nullptr;
 			static const std::unordered_map<std::string, RE::FormType> kMap{
-				{ "NPC",  RE::FormType::NPC },
-				{ "Door", RE::FormType::Door },
+				{ "NPC",       RE::FormType::NPC },
+				{ "Door",      RE::FormType::Door },
+				{ "Container", RE::FormType::Container },
+				{ "Activator", RE::FormType::Activator },
 			};
 			const auto it = kMap.find(val.asString());
 			if (it == kMap.end()) return nullptr;
@@ -656,11 +660,12 @@ namespace Config
 					for (auto* crimeList : processLists->globalCrimes) {
 						if (!crimeList) continue;
 
-						for (auto* crime : *crimeList) {
-							if (!crime || *(RE::ActorHandle*)((char*)crime + 0xC) != playerHandle) continue; //0C = criminalHandle
+						for (auto* crime_ : *crimeList) {
+							Ext::Crime* crime = reinterpret_cast<Ext::Crime*>(crime_);
+							if (!crime || crime->criminalHandle != playerHandle || crime->bountyAmount == 0) continue; //0C = criminalHandle 58 = bounty
 
 							for (const auto& witness : crime->actorsKnowOfCrime)
-								if (witness == actorHandle) return *(bool*)((char*)crime + 0x68); //68 = crimeEstablished
+								if (witness == actorHandle) return crime->crimeEstablished; //68 = crimeEstablished
 						}
 					}
 
@@ -686,8 +691,9 @@ namespace Config
 					for (auto* crimeList : processLists->globalCrimes) {
 						if (!crimeList) continue;
 
-						for (auto* crime : *crimeList) {
-							if (!crime || *(RE::ActorHandle*)((char*)crime + 0xC) != playerHandle) continue; //0C = criminalHandle
+						for (auto* crime_ : *crimeList) {
+							Ext::Crime* crime = reinterpret_cast<Ext::Crime*>(crime_);
+							if (!crime || crime->criminalHandle != playerHandle || crime->bountyAmount == 0) continue; //0C = criminalHandle 58 = bounty
 
 							for (const auto& witness : crime->actorsKnowOfCrime)
 								if (witness == actorHandle) return true;
@@ -763,8 +769,10 @@ namespace Config
 		parsed.SetIcon(std::move(iconData));
 
 		static const std::unordered_map<std::string, RE::FormType> kFormTypeMap{
-			{ "NPC",  RE::FormType::NPC },
-			{ "Door", RE::FormType::Door },
+			{ "NPC",       RE::FormType::NPC },
+			{ "Door",      RE::FormType::Door },
+			{ "Container", RE::FormType::Container },
+			{ "Activator", RE::FormType::Activator },
 		};
 
 		RE::FormType formType = RE::FormType::None;

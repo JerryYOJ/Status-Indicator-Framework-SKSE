@@ -6,7 +6,7 @@
 
 void RenderIcons::Install()
 {
-	REL::Relocation<LPVOID> addr{ RELOCATION_ID(51676, 51676) };
+	REL::Relocation<LPVOID> addr{ RELOCATION_ID(50781, 51676) };
 	MH_CreateHook(addr.get(), Update, (LPVOID*)&_Update);
 }
 

@@ -245,7 +245,9 @@
           "type": "string",
           "enum": [
             "NPC",
-            "Door"
+            "Door",
+            "Container",
+            "Activator"
           ]
         },
         "formId": {

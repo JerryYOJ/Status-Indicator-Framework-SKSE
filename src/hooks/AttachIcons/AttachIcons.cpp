@@ -6,7 +6,7 @@
 
 void AttachIcons::Install()
 {
-	REL::Relocation<LPVOID> addr{ RELOCATION_ID(51677, 51677) };
+	REL::Relocation<LPVOID> addr{ RELOCATION_ID(50782, 51677) };
 	MH_CreateHook(addr.get(), InitializeMarkerData, (LPVOID*)&_InitializeMarkerData);
 }
 

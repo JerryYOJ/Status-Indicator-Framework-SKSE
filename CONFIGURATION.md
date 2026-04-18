@@ -74,7 +74,7 @@ These work on any `TESObjectREFR`.
 
 | Field | Type | Description |
 |---|---|---|
-| `formType` | string | Base form type. Supported values: `NPC`, `Door` |
+| `formType` | string | Base form type. Supported values: `NPC`, `Door`, `Container`, `Activator` |
 | `formId` | string or array | Matches the reference FormID |
 | `baseFormId` | string or array | Matches the base form FormID |
 | `keywords` | string or array | Keyword FormID(s). All listed keywords must be present |
@@ -271,6 +271,7 @@ Global display settings are loaded from `Data/SKSE/Plugins/SIF.json`.
 ```json
 {
   "actorOffsetZ": 20.0,
+  "genericOffsetZ": 20.0,
   "markerOffsetZ": 20.0,
   "iconSpacing": 30.0,
   "scaleDepthNear": 200.0,
@@ -283,7 +284,8 @@ Global display settings are loaded from `Data/SKSE/Plugins/SIF.json`.
 | Field | Default | Description |
 |---|---|---|
 | `actorOffsetZ` | `20.0` | Extra Z offset applied to actor anchors |
-| `markerOffsetZ` | `20.0` | Extra Z offset applied to object/load-door anchors |
+| `genericOffsetZ` | `20.0` | Extra Z offset applied to cached non-actor anchors such as containers and activators |
+| `markerOffsetZ` | `20.0` | Extra Z offset applied to cached door anchors |
 | `iconSpacing` | `30.0` | Horizontal spacing between multiple icons on one target |
 | `scaleDepthNear` | `200.0` | Near depth clamp for icon scaling |
 | `scaleDepthFar` | `1000.0` | Far depth clamp for icon scaling |
@@ -349,6 +351,34 @@ Hostile NPCs in combat:
     "formType": "NPC",
     "isHostile": true,
     "isInCombat": true
+  }
+}
+```
+
+Containers only:
+
+```json
+{
+  "icon": {
+    "source": "SIF/containers.swf",
+    "label": "ContainerIcon"
+  },
+  "match": {
+    "formType": "Container"
+  }
+}
+```
+
+Activators only:
+
+```json
+{
+  "icon": {
+    "source": "SIF/activators.swf",
+    "label": "ActivatorIcon"
+  },
+  "match": {
+    "formType": "Activator"
   }
 }
 ```
