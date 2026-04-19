@@ -21,7 +21,9 @@ namespace Config
 
 		static std::unique_ptr<Condition> BuildMagicEffect(const Json::Value& val, RE::FormType);
 		static std::unique_ptr<Condition> BuildEncounterZone(const Json::Value& val, RE::FormType);
+		static std::unique_ptr<Condition> BuildFaction(const Json::Value& val, RE::FormType);
 		static std::unique_ptr<EffectMatcher> BuildEffectMatcher(const std::string& name, const Json::Value& val);
 		static std::unique_ptr<EncounterZoneMatcher> BuildEncounterZoneMatcher(const std::string& name, const Json::Value& val);
+		static std::unique_ptr<FactionMatcher> BuildFactionMatcher(const std::string& name, const Json::Value& val, RE::TESFaction*& outFaction);
 	};
 }

@@ -186,6 +186,65 @@ Example:
 }
 ```
 
+### `faction`
+
+`faction` is a nested actor matcher.
+
+- The ref must be an actor.
+- The actor must be a member of the specified faction(s).
+- If `rank` is provided, the actor's rank in the faction identified by `formId` must satisfy the range.
+- When `formId` is an array, `rank` checks against the first resolved single faction. For rank checks against multiple factions, use `anyOf` with separate `faction` objects.
+
+Supported fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `formId` | string or array | Faction FormID(s). Actor must be a member of at least one. Supports `BGSListForm` |
+| `rank` | number or object | Faction rank. Exact number or `{ "min": ..., "max": ... }` range |
+
+Examples:
+
+Companions member:
+
+```json
+{
+  "match": {
+    "formType": "NPC",
+    "faction": {
+      "formId": "Skyrim.esm|0x00028470"
+    }
+  }
+}
+```
+
+Faction rank check (rank 2+ in the Companions):
+
+```json
+{
+  "match": {
+    "formType": "NPC",
+    "faction": {
+      "formId": "Skyrim.esm|0x00028470",
+      "rank": { "min": 2 }
+    }
+  }
+}
+```
+
+Multiple faction checks:
+
+```json
+{
+  "match": {
+    "formType": "NPC",
+    "anyOf": [
+      { "faction": { "formId": "Skyrim.esm|0x00028470", "rank": { "min": 2 } } },
+      { "faction": { "formId": "Skyrim.esm|0x000267C3", "rank": { "min": 3 } } }
+    ]
+  }
+}
+```
+
 ### Logical Operators
 
 `not`

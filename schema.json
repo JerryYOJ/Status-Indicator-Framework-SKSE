@@ -237,6 +237,31 @@
       },
       "additionalProperties": false
     },
+    "faction": {
+      "type": "object",
+      "description": "Matches actor faction membership and rank. The ref must be an actor.",
+      "properties": {
+        "formId": {
+          "$ref": "#/$defs/formIdOrArray",
+          "description": "Faction FormID(s). Actor must be a member of at least one."
+        },
+        "rank": {
+          "oneOf": [
+            {
+              "type": "number"
+            },
+            {
+              "$ref": "#/$defs/rangeObject"
+            }
+          ],
+          "description": "Faction rank. Exact number or range. Requires formId to identify the faction."
+        }
+      },
+      "patternProperties": {
+        "^\\$": {}
+      },
+      "additionalProperties": false
+    },
     "match": {
       "type": "object",
       "description": "Top-level fields are AND-combined. Empty match objects are allowed.",
@@ -276,6 +301,9 @@
         },
         "encounterZone": {
           "$ref": "#/$defs/encounterZone"
+        },
+        "faction": {
+          "$ref": "#/$defs/faction"
         },
         "raceFormId": {
           "$ref": "#/$defs/formIdOrArray"

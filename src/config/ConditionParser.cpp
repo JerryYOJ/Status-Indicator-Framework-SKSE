@@ -479,6 +479,76 @@ namespace Config
 		return nullptr;
 	}
 
+	std::unique_ptr<Condition> ConditionParser::BuildFaction(const Json::Value& val, RE::FormType)
+	{
+		auto cond = std::make_unique<FactionCondition>();
+
+		if (val.isObject()) {
+			RE::TESFaction* matchedFaction = nullptr;
+
+			for (const auto& name : val.getMemberNames()) {
+				if (name.empty() || name[0] == '$') {
+					continue;
+				}
+
+				if (auto matcher = BuildFactionMatcher(name, val[name], matchedFaction)) {
+					cond->AddMatcher(std::move(matcher));
+				}
+			}
+		}
+
+		return cond;
+	}
+
+	std::unique_ptr<FactionMatcher> ConditionParser::BuildFactionMatcher(const std::string& name, const Json::Value& val, RE::TESFaction*& outFaction)
+	{
+		if (name == "formId") {
+			auto ids = ParseUtil::ParseFormIDArray(val);
+			if (ids.empty()) {
+				return nullptr;
+			}
+
+			if (ids.size() == 1) {
+				auto* resolved = RE::TESForm::LookupByID(ids[0]);
+				if (resolved) {
+					outFaction = resolved->As<RE::TESFaction>();
+				}
+			}
+
+			return std::make_unique<FactionFormMatch>(std::move(ids));
+		}
+
+		if (name == "rank") {
+			std::optional<float> min;
+			std::optional<float> max;
+
+			if (val.isNumeric()) {
+				const float exact = static_cast<float>(val.asDouble());
+				min = exact;
+				max = exact;
+			} else if (val.isObject()) {
+				if (val["min"].isNumeric()) {
+					min = static_cast<float>(val["min"].asDouble());
+				}
+				if (val["max"].isNumeric()) {
+					max = static_cast<float>(val["max"].asDouble());
+				}
+			}
+
+			if (min || max) {
+				auto matcher = std::make_unique<FactionRankMatch>(min, max);
+				if (outFaction) {
+					matcher->SetFaction(outFaction);
+				}
+				return matcher;
+			}
+			return nullptr;
+		}
+
+		logger::warn("Unknown faction matcher: '{}'", name);
+		return nullptr;
+	}
+
 	std::map<std::string, ConditionParser::Builder, CaseInsensitiveCompare> ConditionParser::BuilderMap =
 	{
 		{ "formType", [](const Json::Value& val, RE::FormType) -> std::unique_ptr<Condition> {
@@ -561,6 +631,7 @@ namespace Config
 
 		{ "magicEffect", BuildMagicEffect },
 		{ "encounterZone", BuildEncounterZone },
+		{ "faction", BuildFaction },
 
 		{ "raceFormId", [](const Json::Value& val, RE::FormType) -> std::unique_ptr<Condition> {
 			auto ids = ParseUtil::ParseFormIDArray(val);

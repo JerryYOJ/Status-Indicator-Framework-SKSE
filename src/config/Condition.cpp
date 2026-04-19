@@ -92,4 +92,20 @@ namespace Config
 
 		return true;
 	}
+
+	bool FactionCondition::Match(RE::TESObjectREFR* ref) const
+	{
+		auto* actor = ref ? ref->As<RE::Actor>() : nullptr;
+		if (!actor) {
+			return false;
+		}
+
+		for (const auto& matcher : _matchers) {
+			if (!matcher->Match(actor)) {
+				return false;
+			}
+		}
+
+		return true;
+	}
 }
