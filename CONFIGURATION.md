@@ -51,12 +51,14 @@ Data/SKSE/Plugins/SIF.json
 | `fadeMaxDistance` | no | `1800.0` | Hard distance cutoff; icons past this distance are skipped |
 | `fadeStartDistance` | no | `300.0` | Distance at which alpha begins fading |
 | `maxInstances` | no | `5` | Per-label on-screen instance limit for this rule, clamped to `1..48` |
+| `color` | no | none | Tint color in `#RRGGBB` hex format (e.g. `"#FF4444"`) |
 
 Notes:
 
 - `fadeStartDistance` and `fadeMaxDistance` are used by the runtime alpha fade.
 - `maxInstances` also affects pool attachment. `ConfigManager::GetLoadedIcons()` uses the maximum `maxInstances` seen for each label across all rules.
 - The current pool implementation is keyed by `label` only. Do not reuse the same `label` across different `source` SWFs.
+- `color` tints the icon at runtime via Scaleform `ColorTransform` multipliers. This multiplies each RGB channel (0.0..1.0), so `#FFFFFF` is a no-op and `#FF0000` keeps only the red channel. Requires no SWF changes.
 
 ## Match
 

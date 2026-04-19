@@ -865,6 +865,22 @@ namespace Config
 		iconData.fadeMaxDistance = icon.get("fadeMaxDistance", iconData.fadeMaxDistance).asFloat();
 		iconData.fadeStartDistance = icon.get("fadeStartDistance", iconData.fadeStartDistance).asFloat();
 		iconData.maxInstances = std::clamp(icon.get("maxInstances", iconData.maxInstances).asUInt(), 1u, 48u);
+
+		if (const auto& colorVal = icon["color"]; colorVal.isString()) {
+			const auto hex = colorVal.asString();
+			if (hex.size() == 7 && hex[0] == '#') {
+				auto parseHex = [](const std::string& s, std::size_t pos) -> float {
+					return static_cast<float>(std::stoul(s.substr(pos, 2), nullptr, 16)) / 255.0f;
+				};
+				iconData.colorR = parseHex(hex, 1);
+				iconData.colorG = parseHex(hex, 3);
+				iconData.colorB = parseHex(hex, 5);
+				iconData.hasColor = true;
+			} else {
+				logger::warn("Invalid color format '{}', expected '#RRGGBB'", hex);
+			}
+		}
+
 		parsed.SetIcon(std::move(iconData));
 
 		static const std::unordered_map<std::string, RE::FormType> kFormTypeMap{
