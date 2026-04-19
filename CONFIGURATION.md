@@ -97,6 +97,8 @@ These only match when the ref is an actor.
 | `isProtected` | bool | Matches protected flag |
 | `isPlayerTeammate` | bool | Matches follower/teammate state |
 | `isInCombat` | bool | Matches combat state |
+| `combatState` | integer | Actor combat state: `0` = out of combat, `1` = in combat (target known), `2` = searching (target lost) |
+| `detectionLevel` | object | NPC's detection level toward the player. Range using `min` and/or `max`. Only valid for kHigh-process actors; returns `0` for others |
 | `isWitness` | bool | True if the actor is in any of the player's active crime witness lists |
 | `isWitnessedCrimeEstablished` | bool | True if the actor is a witness on one of the player's crimes and that crime's `crimeEstablished` flag is set |
 

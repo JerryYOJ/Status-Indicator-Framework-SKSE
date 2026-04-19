@@ -301,6 +301,15 @@
         "isInCombat": {
           "type": "boolean"
         },
+        "combatState": {
+          "type": "integer",
+          "enum": [0, 1, 2],
+          "description": "0 = out of combat, 1 = in combat (target known), 2 = searching (target lost)"
+        },
+        "detectionLevel": {
+          "$ref": "#/$defs/rangeObject",
+          "description": "NPC detection level toward the player. Only valid for kHigh-process actors."
+        },
         "isWitness": {
           "type": "boolean"
         },

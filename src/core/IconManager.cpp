@@ -176,9 +176,15 @@ void IconManager::RenderIcons(RE::FloatingQuestMarker* thiz)
 	std::unordered_map<std::string, std::size_t> slotCounters;
 
 	// Actors
+
+	//Hack - cache actor's ash pile ref to render
+	std::vector<RE::ObjectRefHandle> ashPileRefs;
+
 	RE::ProcessLists::GetSingleton()->ForEachHighActor([&](RE::Actor* actor) -> RE::BSContainer::ForEachResult {
 		if (!actor || actor->IsDeleted() || actor->IsDisabled())
 			return RE::BSContainer::ForEachResult::kContinue;
+		
+		if (actor->extraList.GetAshPileRef() && actor->extraList.GetAshPileRef().get()) ashPileRefs.push_back(actor->extraList.GetAshPileRef());
 
 		const auto icons = configManager->GetIcons(actor);
 		if (icons.empty())
@@ -229,6 +235,58 @@ void IconManager::RenderIcons(RE::FloatingQuestMarker* thiz)
 
 	//Load Zones
 	for (const auto& handle : _cachedRefs) {
+		auto ref = handle.get();
+		if (!ref || ref->IsDeleted() || ref->IsDisabled())
+			continue;
+
+		const auto icons = configManager->GetIcons(ref.get());
+		if (icons.empty())
+			continue;
+
+		RE::NiPoint3 worldPos;
+		if (!GetTargetPos(ref.get(), worldPos))
+			continue;
+
+		const auto* baseObject = ref->GetBaseObject();
+		worldPos.z += baseObject && baseObject->GetFormType() == RE::FormType::Door ?
+			settings.markerOffsetZ :
+			settings.genericOffsetZ;
+
+		float x = 0.0f;
+		float y = 0.0f;
+		float depth = 0.0f;
+		if (!ProjectToHud(thiz, worldPos, x, y, depth))
+			continue;
+
+		const float distance = player->GetPosition().GetDistance(worldPos);
+
+		std::vector<std::pair<const Config::IconData*, std::size_t>> renderable;
+		for (const auto* iconData : icons) {
+			if (distance > iconData->fadeMaxDistance)
+				continue;
+			if (!_pools.contains(iconData->label))
+				continue;
+			auto& slot = slotCounters[iconData->label];
+			if (slot >= static_cast<std::size_t>(iconData->maxInstances))
+				continue;
+			renderable.emplace_back(iconData, slot++);
+		}
+
+		if (renderable.empty())
+			continue;
+
+		const float scaledSpacing = settings.iconSpacing * (CalculateScale(depth, settings) / settings.scaleMax);
+		const float totalWidth = (static_cast<float>(renderable.size()) - 1.0f) * scaledSpacing;
+		float iconX = x - totalWidth / 2.0f;
+
+		for (const auto& [iconData, slot] : renderable) {
+			ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, iconData->fadeStartDistance, iconData->fadeMaxDistance, settings);
+			iconX += scaledSpacing;
+		}
+	}
+
+	//ashPiles
+	for (const auto& handle : ashPileRefs) {
 		auto ref = handle.get();
 		if (!ref || ref->IsDeleted() || ref->IsDisabled())
 			continue;

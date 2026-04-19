@@ -642,6 +642,34 @@ namespace Config
 				});
 		}},
 
+		{ "combatState", [](const Json::Value& val, RE::FormType) -> std::unique_ptr<Condition> {
+			if (!val.isInt()) return nullptr;
+			const auto expected = static_cast<std::uint32_t>(val.asInt());
+			return std::make_unique<ExactMatch<std::uint32_t>>(expected,
+				[](RE::TESObjectREFR* ref) -> std::uint32_t {
+					auto* actor = ref->As<RE::Actor>();
+					if (!actor || !actor->IsInCombat()) return 0;
+					auto* group = actor->GetCombatGroup();
+					return (group && group->searchState != 0) ? 2 : 1;
+				});
+		}},
+
+		{ "detectionLevel", [](const Json::Value& val, RE::FormType) -> std::unique_ptr<Condition> {
+			if (!val.isObject()) return nullptr;
+			std::optional<float> min, max;
+			if (val.isMember("min")) min = val["min"].asFloat();
+			if (val.isMember("max")) max = val["max"].asFloat();
+			if (!min && !max) return nullptr;
+			return std::make_unique<RangeCondition>(min, max,
+				[](RE::TESObjectREFR* ref) -> float {
+					auto* actor = ref->As<RE::Actor>();
+					if (!actor || actor->IsDead()) return 0.0f;
+					auto* player = RE::PlayerCharacter::GetSingleton();
+					if (!player) return 0.0f;
+					return static_cast<float>(actor->RequestDetectionLevel(player));
+				});
+		}},
+
 		{ "isWitnessedCrimeEstablished", [](const Json::Value& val, RE::FormType) -> std::unique_ptr<Condition> {
 			if (!val.isBool()) return nullptr;
 			return std::make_unique<BoolCondition>(val.asBool(),
