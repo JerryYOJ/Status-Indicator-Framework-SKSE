@@ -108,4 +108,25 @@ namespace Config
 
 		return true;
 	}
+
+	bool PackageCondition::Match(RE::TESObjectREFR* ref) const
+	{
+		auto* actor = ref ? ref->As<RE::Actor>() : nullptr;
+		if (!actor) {
+			return false;
+		}
+
+		auto* package = actor->GetCurrentPackage();
+		if (!package) {
+			return false;
+		}
+
+		for (const auto& matcher : _matchers) {
+			if (!matcher->Match(package)) {
+				return false;
+			}
+		}
+
+		return true;
+	}
 }

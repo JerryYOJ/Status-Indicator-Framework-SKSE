@@ -267,6 +267,20 @@
       },
       "additionalProperties": false
     },
+    "package": {
+      "type": "object",
+      "description": "Matches the actor's current AI package. The ref must be an actor with a running package.",
+      "properties": {
+        "formId": {
+          "$ref": "#/$defs/formIdOrArray",
+          "description": "Package FormID(s). Matches the actor's current running package."
+        }
+      },
+      "patternProperties": {
+        "^\\$": {}
+      },
+      "additionalProperties": false
+    },
     "match": {
       "type": "object",
       "description": "Top-level fields are AND-combined. Empty match objects are allowed.",
@@ -309,6 +323,9 @@
         },
         "faction": {
           "$ref": "#/$defs/faction"
+        },
+        "package": {
+          "$ref": "#/$defs/package"
         },
         "raceFormId": {
           "$ref": "#/$defs/formIdOrArray"

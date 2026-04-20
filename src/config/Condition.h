@@ -3,6 +3,7 @@
 #include "conditions/EffectMatcher.h"
 #include "conditions/EncounterZoneMatcher.h"
 #include "conditions/FactionMatcher.h"
+#include "conditions/PackageMatcher.h"
 
 #include <functional>
 #include <memory>
@@ -215,6 +216,20 @@ namespace Config
 
 	private:
 		std::vector<std::unique_ptr<FactionMatcher>> _matchers;
+	};
+
+	class PackageCondition final : public Condition
+	{
+	public:
+		void AddMatcher(std::unique_ptr<PackageMatcher> matcher)
+		{
+			_matchers.push_back(std::move(matcher));
+		}
+
+		bool Match(RE::TESObjectREFR* ref) const override;
+
+	private:
+		std::vector<std::unique_ptr<PackageMatcher>> _matchers;
 	};
 
 	class NotCondition final : public Condition

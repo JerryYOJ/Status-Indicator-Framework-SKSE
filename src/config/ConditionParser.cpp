@@ -479,6 +479,30 @@ namespace Config
 		return nullptr;
 	}
 
+	std::unique_ptr<Condition> ConditionParser::BuildPackage(const Json::Value& val, RE::FormType)
+	{
+		auto cond = std::make_unique<PackageCondition>();
+
+		if (val.isObject()) {
+			for (const auto& name : val.getMemberNames()) {
+				if (name.empty() || name[0] == '$') {
+					continue;
+				}
+
+				if (name == "formId") {
+					auto ids = ParseUtil::ParseFormIDArray(val[name]);
+					if (!ids.empty()) {
+						cond->AddMatcher(std::make_unique<PackageFormMatch>(std::move(ids)));
+					}
+				} else {
+					logger::warn("Unknown package matcher: '{}'", name);
+				}
+			}
+		}
+
+		return cond;
+	}
+
 	std::unique_ptr<Condition> ConditionParser::BuildFaction(const Json::Value& val, RE::FormType)
 	{
 		auto cond = std::make_unique<FactionCondition>();
@@ -632,6 +656,7 @@ namespace Config
 		{ "magicEffect", BuildMagicEffect },
 		{ "encounterZone", BuildEncounterZone },
 		{ "faction", BuildFaction },
+		{ "package", BuildPackage },
 
 		{ "raceFormId", [](const Json::Value& val, RE::FormType) -> std::unique_ptr<Condition> {
 			auto ids = ParseUtil::ParseFormIDArray(val);

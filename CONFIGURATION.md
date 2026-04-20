@@ -103,6 +103,7 @@ These only match when the ref is an actor.
 | `detectionLevel` | object | NPC's detection level toward the player. Range using `min` and/or `max`. Only valid for kHigh-process actors; returns `0` for others |
 | `isWitness` | bool | True if the actor is in any of the player's active crime witness lists |
 | `isWitnessedCrimeEstablished` | bool | True if the actor is a witness on one of the player's crimes and that crime's `crimeEstablished` flag is set |
+| `package` | object | Matches the actor's current AI package. See `package` section below |
 
 ### `magicEffect`
 
@@ -242,6 +243,49 @@ Multiple faction checks:
     "anyOf": [
       { "faction": { "formId": "Skyrim.esm|0x00028470", "rank": { "min": 2 } } },
       { "faction": { "formId": "Skyrim.esm|0x000267C3", "rank": { "min": 3 } } }
+    ]
+  }
+}
+```
+
+### `package`
+
+`package` is a nested actor matcher.
+
+- The ref must be an actor.
+- The actor must have a currently running AI package.
+- The current package must satisfy every field inside `package`.
+
+Supported fields:
+
+| Field | Type | Description |
+|---|---|---|
+| `formId` | string or array | Package FormID(s). Matches the actor's current running package. Supports `BGSListForm` |
+
+Examples:
+
+NPC running a specific package:
+
+```json
+{
+  "match": {
+    "formType": "NPC",
+    "package": {
+      "formId": "Skyrim.esm|0x00012345"
+    }
+  }
+}
+```
+
+NPCs running one of several packages:
+
+```json
+{
+  "match": {
+    "formType": "NPC",
+    "anyOf": [
+      { "package": { "formId": "MyMod.esp|0x001234" } },
+      { "package": { "formId": "MyMod.esp|0x005678" } }
     ]
   }
 }
