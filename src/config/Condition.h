@@ -212,6 +212,8 @@ namespace Config
 			_matchers.push_back(std::move(matcher));
 		}
 
+		bool HasMatchers() const { return !_matchers.empty(); }
+
 		bool Match(RE::TESObjectREFR* ref) const override;
 
 	private:
@@ -225,6 +227,8 @@ namespace Config
 		{
 			_matchers.push_back(std::move(matcher));
 		}
+
+		bool HasMatchers() const { return !_matchers.empty(); }
 
 		bool Match(RE::TESObjectREFR* ref) const override;
 

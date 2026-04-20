@@ -500,6 +500,10 @@ namespace Config
 			}
 		}
 
+		if (!cond->HasMatchers()) {
+			return std::make_unique<FuncCondition>([](RE::TESObjectREFR*) { return false; });
+		}
+
 		return cond;
 	}
 
@@ -519,6 +523,10 @@ namespace Config
 					cond->AddMatcher(std::move(matcher));
 				}
 			}
+		}
+
+		if (!cond->HasMatchers()) {
+			return std::make_unique<FuncCondition>([](RE::TESObjectREFR*) { return false; });
 		}
 
 		return cond;
