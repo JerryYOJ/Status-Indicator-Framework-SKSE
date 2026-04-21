@@ -9,6 +9,10 @@ namespace Config {
         float fadeMaxDistance{ 1800.0f };   // Distance at which alpha reaches 0 (hard render cutoff)
         float fadeStartDistance{ 300.0f }; // Distance at which alpha begins fading
         std::uint32_t maxInstances{ 5 }; // Max simultaneous instances attached for this icon
+        float colorR{ 1.0f };
+        float colorG{ 1.0f };
+        float colorB{ 1.0f };
+        bool hasColor{ false };
     };
 
     class Rule {
