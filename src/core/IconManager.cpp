@@ -226,7 +226,11 @@ void IconManager::RenderIcons(RE::FloatingQuestMarker* thiz)
 		float iconX = x - totalWidth / 2.0f;
 
 		for (const auto& [iconData, slot] : renderable) {
-			ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, iconData->fadeStartDistance, iconData->fadeMaxDistance, settings);
+			if (iconData->hasColor) {
+				ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, iconData->fadeStartDistance, iconData->fadeMaxDistance, settings, *iconData);
+			} else {
+				ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, iconData->fadeStartDistance, iconData->fadeMaxDistance, settings);
+			}
 			iconX += scaledSpacing;
 		}
 
@@ -280,7 +284,11 @@ void IconManager::RenderIcons(RE::FloatingQuestMarker* thiz)
 		float iconX = x - totalWidth / 2.0f;
 
 		for (const auto& [iconData, slot] : renderable) {
-			ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, iconData->fadeStartDistance, iconData->fadeMaxDistance, settings);
+			if (iconData->hasColor) {
+				ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, iconData->fadeStartDistance, iconData->fadeMaxDistance, settings, *iconData);
+			} else {
+				ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, iconData->fadeStartDistance, iconData->fadeMaxDistance, settings);
+			}
 			iconX += scaledSpacing;
 		}
 	}
@@ -332,7 +340,11 @@ void IconManager::RenderIcons(RE::FloatingQuestMarker* thiz)
 		float iconX = x - totalWidth / 2.0f;
 
 		for (const auto& [iconData, slot] : renderable) {
-			ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, iconData->fadeStartDistance, iconData->fadeMaxDistance, settings);
+			if (iconData->hasColor) {
+				ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, iconData->fadeStartDistance, iconData->fadeMaxDistance, settings, *iconData);
+			} else {
+				ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, iconData->fadeStartDistance, iconData->fadeMaxDistance, settings);
+			}
 			iconX += scaledSpacing;
 		}
 	}
@@ -354,6 +366,37 @@ void IconManager::ShowIcon(RE::GFxValue& clip, float x, float y, float distance,
 	displayInfo.SetAlpha(CalculateAlpha(distance, fadeStart, fadeMax));
 	displayInfo.SetScale(scale, scale);
 	clip.SetDisplayInfo(displayInfo);
+}
+
+void IconManager::ShowIcon(RE::GFxValue& clip, float x, float y, float distance, float depth, float fadeStart, float fadeMax, const Config::Settings& settings, const Config::IconData& iconData)
+{
+	if (!clip.IsDisplayObject()) {
+		return;
+	}
+
+	const float scale = CalculateScale(depth, settings);
+
+	RE::GFxValue::DisplayInfo displayInfo;
+	clip.GetDisplayInfo(&displayInfo);
+	displayInfo.SetX(x);
+	displayInfo.SetY(y);
+	displayInfo.SetRotation(0.0);
+	displayInfo.SetAlpha(CalculateAlpha(distance, fadeStart, fadeMax));
+	displayInfo.SetScale(scale, scale);
+	clip.SetDisplayInfo(displayInfo);
+
+	if (iconData.hasColor) {
+		RE::GFxValue transform;
+		if (clip.GetMember("transform", &transform) && transform.IsObject()) {
+			RE::GFxValue colorTransform;
+			if (transform.GetMember("colorTransform", &colorTransform) && colorTransform.IsObject()) {
+				colorTransform.SetMember("redMultiplier", RE::GFxValue{ iconData.colorR });
+				colorTransform.SetMember("greenMultiplier", RE::GFxValue{ iconData.colorG });
+				colorTransform.SetMember("blueMultiplier", RE::GFxValue{ iconData.colorB });
+				transform.SetMember("colorTransform", colorTransform);
+			}
+		}
+	}
 }
 
 void IconManager::HideIcon(RE::GFxValue& clip)

@@ -12,6 +12,7 @@ public:
 	void InitializeAndAttachIcons(RE::FloatingQuestMarker* thiz);
 	void RenderIcons(RE::FloatingQuestMarker* thiz);
 	void ShowIcon(RE::GFxValue& clip, float x, float y, float distance, float depth, float fadeStart, float fadeMax, const Config::Settings& settings);
+	void ShowIcon(RE::GFxValue& clip, float x, float y, float distance, float depth, float fadeStart, float fadeMax, const Config::Settings& settings, const Config::IconData& iconData);
 	void HideIcon(RE::GFxValue& clip);
 	void AddCachedRef(RE::TESObjectREFR* ref);
 	void RemoveCachedRef(const RE::ObjectRefHandle& handle);
