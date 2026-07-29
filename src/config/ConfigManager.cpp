@@ -1,6 +1,6 @@
 #include "ConfigManager.h"
 #include "ConditionParser.h"
-
+#include "../core/IconManager.h"
 #include <json/json.h>
 
 namespace Config {
@@ -16,6 +16,43 @@ namespace Config {
         logger::info("SIF API: registered '{}'", name);
         return true;
     }
+
+    void ConfigManager::RegisterTrackedRef(HMODULE key, RE::TESObjectREFR* ref){
+        if (!ref) {
+            logger::warn("{} - nullptr", __func__);
+            return;
+        }       
+        
+        IconManager::getInstance()->AddCachedRef(ref, key);
+        
+        return;
+    }
+
+    void ConfigManager::UnregisterTrackedRef(HMODULE key, RE::TESObjectREFR* ref) {
+        if (!ref) {
+            logger::warn("{} - nullptr", __func__);
+            return;
+        }
+
+        IconManager::getInstance()->RemoveCachedRef(ref->GetHandle(), key);
+        return ;
+    }
+
+    void ConfigManager::ClearTrackedRef(HMODULE key) {
+       auto im = IconManager::getInstance();
+       std::vector<IconManager::trackedData> filtered;
+       std::copy_if(im->trackedRef.begin(), im->trackedRef.end(), std::back_inserter(filtered),
+           [&](const auto& e){
+                return e.owner == key;
+           }
+       );
+       for (const auto& e : filtered) {
+           UnregisterTrackedRef(e.owner, e.ref);
+       }
+       return;
+    }
+
+
 
     void ConfigManager::LoadExternalConditions() {
         SKSE::GetMessagingInterface()->Dispatch(

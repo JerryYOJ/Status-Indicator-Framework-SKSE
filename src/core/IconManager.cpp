@@ -411,7 +411,7 @@ void IconManager::HideIcon(RE::GFxValue& clip)
 	clip.SetDisplayInfo(displayInfo);
 }
 
-void IconManager::AddCachedRef(RE::TESObjectREFR* ref)
+void IconManager::AddCachedRef(RE::TESObjectREFR* ref, HMODULE owner)
 {
 	if (!ref) {
 		return;
@@ -421,21 +421,37 @@ void IconManager::AddCachedRef(RE::TESObjectREFR* ref)
 		return;
 	}
 
+	trackedData data = { owner,ref };
+
+	if (trackedRef.end() == std::find(trackedRef.begin(), trackedRef.end(), data)) {
+		trackedRef.push_back(data);
+	}
+
 	const auto key = handle.native_handle();
 	if (_indexByHandle.find(key) != _indexByHandle.end()) {
 		return;
 	}
-
 	_indexByHandle[key] = _cachedRefs.size();
 	_cachedRefs.push_back(handle);
 }
 
-void IconManager::RemoveCachedRef(const RE::ObjectRefHandle& handle)
+void IconManager::RemoveCachedRef(const RE::ObjectRefHandle& handle, HMODULE owner)
 {
 	if (!handle) {
 		return;
 	}
-
+	{
+		auto* ref = handle.get().get();
+		if(!ref){return;}
+		trackedData data = { owner,ref };
+		auto it = std::find(trackedRef.begin(), trackedRef.end(), data);
+		if (it == trackedRef.end()) { return; }
+		trackedRef.erase(it);
+		it = std::find_if(trackedRef.begin(), trackedRef.end(), [ref](const auto& data) {
+			return data.ref == ref;
+			});
+		if (it != trackedRef.end()) { return; }
+	}
 	const auto key = handle.native_handle();
 	const auto it = _indexByHandle.find(key);
 	if (it == _indexByHandle.end()) {

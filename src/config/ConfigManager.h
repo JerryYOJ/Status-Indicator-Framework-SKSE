@@ -14,6 +14,7 @@ namespace Config {
         float scaleMax{ 100.0f };
     };
 
+
     class ConfigManager : public SINGLETON<ConfigManager>, public SIF::IAPI {
         friend SINGLETON;
 
@@ -23,8 +24,19 @@ namespace Config {
             SIF::ConditionBuilder builder
         ) override;
 
+        virtual void RegisterTrackedRef(
+            HMODULE key,
+            RE::TESObjectREFR* ref
+        ) override;
+        virtual void ClearTrackedRef(HMODULE key) override;
+
+        virtual void UnregisterTrackedRef(
+            HMODULE key,
+            RE::TESObjectREFR* ref
+        ) override;
+
         virtual uint32_t GetVersion() const override {
-            return 1;
+            return 2;
         }
 
         void LoadConfigs();

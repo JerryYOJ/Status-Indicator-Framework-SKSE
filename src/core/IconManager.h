@@ -9,14 +9,22 @@
 
 class IconManager : public SINGLETON<IconManager> {
 public:
+	struct trackedData {
+		HMODULE owner;
+		RE::TESObjectREFR* ref;
+		bool operator==(const trackedData& other) const
+		{
+			return owner == other.owner && ref == other.ref;
+		}
+	};
+	std::vector<trackedData> trackedRef;
 	void InitializeAndAttachIcons(RE::FloatingQuestMarker* thiz);
 	void RenderIcons(RE::FloatingQuestMarker* thiz);
 	void ShowIcon(RE::GFxValue& clip, float x, float y, float distance, float depth, float fadeStart, float fadeMax, const Config::Settings& settings);
 	void ShowIcon(RE::GFxValue& clip, float x, float y, float distance, float depth, float fadeStart, float fadeMax, const Config::Settings& settings, const Config::IconData& iconData);
 	void HideIcon(RE::GFxValue& clip);
-	void AddCachedRef(RE::TESObjectREFR* ref);
-	void RemoveCachedRef(const RE::ObjectRefHandle& handle);
-
+	void AddCachedRef(RE::TESObjectREFR* ref, HMODULE owner = nullptr);
+	void RemoveCachedRef(const RE::ObjectRefHandle& handle, HMODULE owner = nullptr);
 private:
 	// max simultaneous instances of a single exported symbol
 	static constexpr std::size_t kMaxPerLabel = 48;
