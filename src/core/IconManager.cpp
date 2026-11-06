@@ -91,6 +91,13 @@ static bool GetTargetPos(RE::TESObjectREFR* target, RE::NiPoint3& pos, bool getT
 		if (!getTorsoPos || !GetTorsoPos(actor, pos)) {
 			pos = target->GetLookingAtLocation();
 		}
+	} else if (target->extraList.HasType(RE::ExtraDataType::kAshPileRef)) {
+		// Some ash piles have smoke or glow in their model, which keeps changing the live bounds
+		// GetLookingAtLocation() uses and makes the icon bounce. The base object's bounds are fixed.
+		pos = target->GetPosition();
+		if (const auto* base = target->GetBaseObject()) {
+			pos.z += static_cast<float>(base->boundData.boundMax.z) * target->GetScale();
+		}
 	} else {
 		pos = target->GetLookingAtLocation();
 	}
@@ -226,11 +233,7 @@ void IconManager::RenderIcons(RE::FloatingQuestMarker* thiz)
 		float iconX = x - totalWidth / 2.0f;
 
 		for (const auto& [iconData, slot] : renderable) {
-			if (iconData->hasColor) {
-				ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, iconData->fadeStartDistance, iconData->fadeMaxDistance, settings, *iconData);
-			} else {
-				ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, iconData->fadeStartDistance, iconData->fadeMaxDistance, settings);
-			}
+			ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, settings, *iconData);
 			iconX += scaledSpacing;
 		}
 
@@ -284,11 +287,7 @@ void IconManager::RenderIcons(RE::FloatingQuestMarker* thiz)
 		float iconX = x - totalWidth / 2.0f;
 
 		for (const auto& [iconData, slot] : renderable) {
-			if (iconData->hasColor) {
-				ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, iconData->fadeStartDistance, iconData->fadeMaxDistance, settings, *iconData);
-			} else {
-				ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, iconData->fadeStartDistance, iconData->fadeMaxDistance, settings);
-			}
+			ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, settings, *iconData);
 			iconX += scaledSpacing;
 		}
 	}
@@ -340,48 +339,28 @@ void IconManager::RenderIcons(RE::FloatingQuestMarker* thiz)
 		float iconX = x - totalWidth / 2.0f;
 
 		for (const auto& [iconData, slot] : renderable) {
-			if (iconData->hasColor) {
-				ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, iconData->fadeStartDistance, iconData->fadeMaxDistance, settings, *iconData);
-			} else {
-				ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, iconData->fadeStartDistance, iconData->fadeMaxDistance, settings);
-			}
+			ShowIcon(_pools[iconData->label][slot], iconX, y, distance, depth, settings, *iconData);
 			iconX += scaledSpacing;
 		}
 	}
 }
 
-void IconManager::ShowIcon(RE::GFxValue& clip, float x, float y, float distance, float depth, float fadeStart, float fadeMax, const Config::Settings& settings)
+void IconManager::ShowIcon(RE::GFxValue& clip, float x, float y, float distance, float depth, const Config::Settings& settings, const Config::IconData& iconData)
 {
 	if (!clip.IsDisplayObject()) {
 		return;
 	}
 
-	const float scale = CalculateScale(depth, settings);
+	const float baseScale = iconData.fixedSize ? settings.scaleMax : CalculateScale(depth, settings);
+	const float scale = baseScale * iconData.scale;
+	const float alpha = CalculateAlpha(distance, iconData.fadeStartDistance, iconData.fadeMaxDistance) * (iconData.opacity / 100.0f);
 
 	RE::GFxValue::DisplayInfo displayInfo;
 	clip.GetDisplayInfo(&displayInfo);
 	displayInfo.SetX(x);
 	displayInfo.SetY(y);
 	displayInfo.SetRotation(0.0);
-	displayInfo.SetAlpha(CalculateAlpha(distance, fadeStart, fadeMax));
-	displayInfo.SetScale(scale, scale);
-	clip.SetDisplayInfo(displayInfo);
-}
-
-void IconManager::ShowIcon(RE::GFxValue& clip, float x, float y, float distance, float depth, float fadeStart, float fadeMax, const Config::Settings& settings, const Config::IconData& iconData)
-{
-	if (!clip.IsDisplayObject()) {
-		return;
-	}
-
-	const float scale = CalculateScale(depth, settings);
-
-	RE::GFxValue::DisplayInfo displayInfo;
-	clip.GetDisplayInfo(&displayInfo);
-	displayInfo.SetX(x);
-	displayInfo.SetY(y);
-	displayInfo.SetRotation(0.0);
-	displayInfo.SetAlpha(CalculateAlpha(distance, fadeStart, fadeMax));
+	displayInfo.SetAlpha(alpha);
 	displayInfo.SetScale(scale, scale);
 	clip.SetDisplayInfo(displayInfo);
 

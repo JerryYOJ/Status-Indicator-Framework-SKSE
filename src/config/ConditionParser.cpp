@@ -794,6 +794,9 @@ namespace Config
 		iconData.fadeMaxDistance = icon.get("fadeMaxDistance", iconData.fadeMaxDistance).asFloat();
 		iconData.fadeStartDistance = icon.get("fadeStartDistance", iconData.fadeStartDistance).asFloat();
 		iconData.maxInstances = std::clamp(icon.get("maxInstances", iconData.maxInstances).asUInt(), 1u, 48u);
+		iconData.scale = std::max(icon.get("scale", iconData.scale).asFloat(), 0.0f);
+		iconData.opacity = std::clamp(icon.get("opacity", iconData.opacity).asFloat(), 0.0f, 100.0f);
+		iconData.fixedSize = icon.get("fixedSize", iconData.fixedSize).asBool();
 
 		if (const auto& colorVal = icon["color"]; colorVal.isString()) {
 			const auto hex = colorVal.asString();

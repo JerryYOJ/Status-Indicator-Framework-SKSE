@@ -37,14 +37,32 @@ if(DEFINED ENV{SKYRIM_MODS_FOLDER} AND IS_DIRECTORY "$ENV{SKYRIM_MODS_FOLDER}")
 endif()
 
 # Otherwise, you can set OUTPUT_FOLDER to any place you'd like :)
-set(OUTPUT_FOLDER "D:/SteamLibrary/steamapps/common/Skyrim Special Edition/MO2/mods/StatusIndicatorFramework")
+if(NOT DEFINED OUTPUT_FOLDER)
+    set(OUTPUT_FOLDER "D:/SteamLibrary/steamapps/common/Skyrim Special Edition/MO2/mods/StatusIndicatorFramework")
+endif()
 #if(NOT EXISTS "${OUTPUT_FOLDER}") 
 #    set(OUTPUT_FOLDER "C:\\Users\\elain\\AppData\\Local\\ModOrganizer\\Skyrim Special Edition\\mods\\BetterSkyrim")
 #endif()
 
 #include($ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake)
+# CommonLibSSE-NG, built from source. 15.x supports Skyrim 1.7.99 and later (Address Library V5)
+# as well as 1.5.97 and earlier AE versions in one DLL. VR is off because SIF has no VR addresses.
+include(FetchContent)
+set(ENABLE_SKYRIM_SE ON CACHE BOOL "" FORCE)
+set(ENABLE_SKYRIM_AE ON CACHE BOOL "" FORCE)
+set(ENABLE_SKYRIM_VR OFF CACHE BOOL "" FORCE)
+set(SKSE_SUPPORT_XBYAK ON CACHE BOOL "" FORCE)
+set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(
+    CommonLibSSE
+    GIT_REPOSITORY https://github.com/alandtse/CommonLibVR.git
+    GIT_TAG cd21580f7e7cab47df0a7e0fa5e26525527b36bf # ng, release 15.7.0
+    SYSTEM
+)
+FetchContent_MakeAvailable(CommonLibSSE)
+include("${commonlibsse_SOURCE_DIR}/cmake/CommonLibSSE.cmake") # add_commonlibsse_plugin()
+
 # Setup your SKSE plugin as an SKSE plugin!
-find_package(CommonLibSSE CONFIG REQUIRED)
 add_commonlibsse_plugin(${PROJECT_NAME} SOURCES ${sources}) # <--- specifies plugin.cpp
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_23) # <--- use C++23 standard
 target_precompile_headers(${PROJECT_NAME} PRIVATE ../PCH.h) # <--- PCH.h is required!

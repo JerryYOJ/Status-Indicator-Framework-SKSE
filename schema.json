@@ -68,6 +68,21 @@
           "type": "string",
           "pattern": "^#[0-9A-Fa-f]{6}$",
           "description": "Tint color in '#RRGGBB' hex format. Applied via Scaleform ColorTransform multipliers."
+        },
+        "scale": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Size multiplier for this icon."
+        },
+        "opacity": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "Maximum alpha (0..100). The distance fade scales down from this."
+        },
+        "fixedSize": {
+          "type": "boolean",
+          "description": "Draw at scaleMax at every distance instead of shrinking with distance."
         }
       },
       "additionalProperties": false

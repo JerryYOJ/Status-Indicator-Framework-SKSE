@@ -52,6 +52,9 @@ Data/SKSE/Plugins/SIF.json
 | `fadeStartDistance` | no | `300.0` | Distance at which alpha begins fading |
 | `maxInstances` | no | `5` | Per-label on-screen instance limit for this rule, clamped to `1..48` |
 | `color` | no | none | Tint color in `#RRGGBB` hex format (e.g. `"#FF4444"`) |
+| `scale` | no | `1.0` | Size multiplier, e.g. `0.5` for half size |
+| `opacity` | no | `100.0` | Maximum alpha, `0..100`. The distance fade scales down from this |
+| `fixedSize` | no | `false` | Draw at `scaleMax` at every distance instead of shrinking with distance |
 
 Notes:
 

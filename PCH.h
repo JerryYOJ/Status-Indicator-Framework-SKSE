@@ -22,8 +22,10 @@ template <typename T>
 class SINGLETON {
 public:
     static T* getInstance() {
-        static T instance; // Create instance of T
-        return std::addressof(instance);
+        // Never destroyed: IconManager holds GFxValues, and releasing them at exit, after the
+        // game has torn down Scaleform, crashes the game on quit.
+        static T* instance = new T();
+        return instance;
     }
 
 protected:
